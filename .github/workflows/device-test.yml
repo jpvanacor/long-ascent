@@ -24,6 +24,13 @@ jobs:
       fail-fast: false
       matrix:
         api: [30, 31, 33, 34, 35, 36]   # Android 11, 12, 13, 14, 15, 16
+        # Newer system images, which carry a newer web view. They may not exist on the runner: then only that job fails.
+        include:
+          - api: "36.1"
+            optional: true
+          - api: 37
+            optional: true
+    continue-on-error: ${{ matrix.optional == true }}
     steps:
       - uses: actions/checkout@v5
 

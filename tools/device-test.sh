@@ -55,8 +55,18 @@ print(' | '.join(s[:36] for s in seen[:14]) or '(nothing readable)')
 PY
 }
 tap_text() { dump; local p; if p=$(find_node "$1"); then adb shell input tap $p; say "tapped '$1' at $p"; return 0; fi; say "NOT FOUND on screen: '$1'. On screen: $(texts)"; return 1; }
-# a slow emulator sometimes shows "... isn't responding": note which app it names, then choose Wait
-calm() { local p; if find_node "responding" >/dev/null; then say "system box: $(texts)"; if p=$(find_node "Wait"); then adb shell input tap $p; sleep 3; fi; return 0; fi; return 1; }
+# A slow emulator sometimes shows "... isn't responding". If it names the game, that is a finding: note it and wait.
+# If it names something else (the emulator's own home screen, usually), close that so the test can go on.
+calm() {
+  local p box
+  find_node "responding" >/dev/null || return 1
+  box=$(texts); say "system box: $box"
+  case "$box" in
+    *"Long Ascent"*) say "THE GAME WAS REPORTED AS NOT RESPONDING"; p=$(find_node "Wait") && adb shell input tap $p ;;
+    *) p=$(find_node "Close app") && adb shell input tap $p ;;
+  esac
+  sleep 3; return 0
+}
 front() { adb shell dumpsys activity activities | grep -E "ResumedActivity" | head -1 | tr -s ' ' | tr -d '\r'; }
 players() { adb shell dumpsys audio | grep -E "AudioPlaybackConfiguration" | grep -c "state:started"; }
 
