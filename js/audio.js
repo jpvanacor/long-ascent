@@ -53,18 +53,19 @@
       .then(function (b) { return new Promise(function (ok, no) { ctx.decodeAudioData(b, ok, no); }); })
       .then(function (ab) { buf[name] = ab; }).catch(function () { /* a missing effect is silent */ });
   }
+  /* Runs on every touch, click and key. Browsers only let sound start from one of those, and may refuse the first,
+     so this is safe to repeat: it sets things up once and then only restarts what should be sounding and is not. */
   function unlock() {
-    if (unlocked) { if (ctx && ctx.state === 'suspended' && !hidden) ctx.resume().catch(function () {}); return; }
-    unlocked = true;
-    try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) {
-        ctx = new AC(); out = ctx.createGain(); out.gain.value = clamp(set.sfx); out.connect(ctx.destination);
-        if (ctx.state === 'suspended') ctx.resume().catch(function () {});
-        NAMES.forEach(loadOne);
-      }
-    } catch (e) { ctx = null; }
-    music();
+    if (!unlocked) {
+      unlocked = true;
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) { ctx = new AC(); out = ctx.createGain(); out.gain.value = clamp(set.sfx); out.connect(ctx.destination); NAMES.forEach(loadOne); }
+      } catch (e) { ctx = null; }
+    }
+    if (hidden) return;
+    if (ctx && ctx.state === 'suspended') ctx.resume().catch(function () {});
+    if (!cur || (cur.paused && !cur._gap)) music();
   }
   function onHide() {
     hidden = document.hidden || napping;
@@ -83,7 +84,7 @@
     init: function (path) {
       if (path) base = path;
       try { const o = JSON.parse(localStorage.getItem(KEY)); if (o) { if (o.music !== undefined) set.music = clamp(o.music); if (o.sfx !== undefined) set.sfx = clamp(o.sfx); } } catch (e) { /* defaults */ }
-      ['pointerdown', 'keydown', 'touchend'].forEach(function (ev) { window.addEventListener(ev, unlock, { passive: true }); });
+      ['pointerup', 'touchend', 'click', 'keydown'].forEach(function (ev) { window.addEventListener(ev, unlock, { passive: true, capture: true }); });
       document.addEventListener('visibilitychange', onHide);
       document.addEventListener('apppause', function () { napping = true; onHide(); });        // sent by the Android app when it leaves the screen
       document.addEventListener('appresume', function () { napping = false; onHide(); });

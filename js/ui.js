@@ -507,7 +507,7 @@
       n.addEventListener('click', function () { doctrineSheet(a); });
       grove.appendChild(n);
     });
-    return add(band, grove, ribbon(a));
+    return add(band, ribbon(a), grove);
   }
   function panelTree(p) {
     const W = Math.max(270, Math.min(340, (p.clientWidth || 360) - 20));
