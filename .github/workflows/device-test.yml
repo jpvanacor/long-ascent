@@ -50,6 +50,26 @@ jobs:
         if: always()
         run: cat device-test/result.txt || true
 
+      # Small copies of the screenshots go into the log as text, so they can be read without downloading the artifact.
+      - name: Print small copies of the screenshots
+        if: always() && matrix.api == 36
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 - <<'PY'
+          import base64, glob, io
+          from PIL import Image
+          for f in sorted(glob.glob('device-test/*.png')):
+              try:
+                  im = Image.open(f).convert('RGB')
+              except Exception as e:
+                  print('-----SKIP', f, e); continue
+              im = im.resize((360, round(im.height * 360 / im.width)))
+              buf = io.BytesIO(); im.save(buf, 'JPEG', quality=60)
+              print('-----IMG', f.split('/')[-1])
+              print(base64.b64encode(buf.getvalue()).decode())
+              print('-----END')
+          PY
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
