@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Long Ascent</string>
+    <string name="title_activity_main">Long Ascent</string>
+    <string name="package_name">io.github.jpvanacor.longascent</string>
+    <string name="custom_url_scheme">io.github.jpvanacor.longascent</string>
+</resources>

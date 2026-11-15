@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" data-age="1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#170f09">
+<meta name="description" content="Long Ascent: an idle game that climbs from a medieval ford to the stars.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Long Ascent">
+<title>Long Ascent</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <header id="world">
+    <canvas id="scene" aria-label="Your settlement"></canvas>
+    <div id="hud">
+      <div class="res gold" id="col-gold"><span id="ico-gold"></span><div><b class="num" id="amt-gold">0</b><i class="num" id="rate-gold"></i></div></div>
+      <div class="res mat hid" id="col-mat"><span id="ico-mat"></span><div><b class="num" id="amt-mat">0</b><i class="num" id="rate-mat"></i></div></div>
+      <div class="res kn hid" id="col-kn"><span id="ico-kn"></span><div><b class="num" id="amt-kn">0</b><i class="num" id="rate-kn"></i></div></div>
+      <button class="round" id="menu" type="button" aria-label="Menu"></button>
+    </div>
+    <div id="banner">
+      <div class="emblem" id="emblem"></div>
+      <div><h1 id="title">Long Ascent</h1><div id="sub"></div></div>
+      <div id="stagepips"></div>
+    </div>
+  </header>
+  <main id="panel"></main>
+  <a id="update" hidden></a>
+  <nav id="tabs" hidden></nav>
+  <div id="toast" role="status"></div>
+  <div id="modal" hidden><div id="sheet"></div></div>
+  <canvas id="fx"></canvas>
+  <div id="floaters"></div>
+  <div id="turn"></div>
+</div>
+<script>var APP_VERSION=2;</script>
+<script src="js/icons.js"></script>
+<script src="js/core.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
