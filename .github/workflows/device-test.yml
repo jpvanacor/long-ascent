@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [34, 35, 36]
+        api: [30, 31, 33, 34, 35, 36]   # Android 11, 12, 13, 14, 15, 16
     steps:
       - uses: actions/checkout@v5
 

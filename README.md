@@ -32,6 +32,9 @@ There is no build step: GitHub Pages serves the files as they are.
 Android workflow builds a new APK from the same files and attaches it to a release named after `APP_VERSION`; the
 Android app then shows a bar saying a new version is ready. Raise `CACHE` in `sw.js` together with `APP_VERSION`.
 
+A published APK is never replaced by another build: if a release for the current `APP_VERSION` already has one,
+the workflow leaves it alone and says so. To publish a change, raise `APP_VERSION`.
+
 The Android signing key (`android/app/long-ascent-release.p12`) is kept in the repository so each build can update
 the previous install. Only install APKs from this repository's releases.
 
@@ -45,6 +48,9 @@ node tools/sim.js cal    # refit the prices to the target pace, then: node tools
 node tools/shot.js       # phone-sized screenshots of every screen (needs Playwright and Chrome)
 node tools/bot.js        # a robot plays a whole world through the real buttons
 ```
+
+After every Android build, the `Device test` workflow installs the released APK on Android 11 to 16
+emulators, opens the game, touches a few buttons and tries Back and Home (`tools/device-test.sh`).
 
 The music is written as note lists and can be rendered again with `node tools/music/build.js`; see `CREDITS.md` for
 where the instrument samples come from.

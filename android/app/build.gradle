@@ -24,6 +24,9 @@ android {
             storePassword System.getenv("LONG_ASCENT_KEY_PASSWORD") ?: "long-ascent"
             keyAlias "longascent"
             keyPassword System.getenv("LONG_ASCENT_KEY_PASSWORD") ?: "long-ascent"
+            // Both the old (JAR) and the current signature, so every installer and scanner can read it.
+            enableV1Signing true
+            enableV2Signing true
         }
     }
     buildTypes {

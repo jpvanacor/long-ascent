@@ -13,7 +13,7 @@ on:
       - "icons/**"
       - "audio/**"
       - "android/**"
-      - "scripts/**"
+      - "scripts/build-www.mjs"
       - "capacitor.config.json"
       - "package.json"
       - "package-lock.json"
@@ -72,8 +72,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           V: ${{ steps.version.outputs.number }}
         run: |
-          if gh release view "v$V" > /dev/null 2>&1; then
-            gh release upload "v$V" long-ascent.apk --clobber
+          # A published file is never swapped for another: someone may be downloading it. New build, new version.
+          if gh release view "v$V" --json assets --jq '.assets[].name' 2> /dev/null | grep -qx "long-ascent.apk"; then
+            echo "::warning::Version $V is already published and was left as it is. To publish this build, raise APP_VERSION in index.html and CACHE in sw.js."
+          elif gh release view "v$V" > /dev/null 2>&1; then
+            gh release upload "v$V" long-ascent.apk
           else
             gh release create "v$V" long-ascent.apk --title "Long Ascent $V" --notes "Android app. On your phone, download long-ascent.apk and open it to install or update." --latest
           fi
