@@ -6,7 +6,7 @@
   const KEY = 'long-ascent-audio-v1', GAP_MS = 14000;
   const NAMES = ['tap', 'open', 'coin', 'buy', 'research', 'doctrine', 'edict', 'stage', 'recruit', 'equip', 'send', 'victory', 'defeat', 'draw', 'relic', 'collect', 'perk', 'ageup', 'depart', 'error'];
   const set = { music: 0.6, sfx: 0.8 };
-  let base = 'audio/', ctx = null, out = null, unlocked = false, hidden = false, cur = null, curAge = 0, wantAge = 1;
+  let base = 'audio/', ctx = null, out = null, unlocked = false, hidden = false, napping = false, cur = null, curAge = 0, wantAge = 1;
   const buf = {}, lastAt = {};
 
   function save() { try { localStorage.setItem(KEY, JSON.stringify(set)); } catch (e) { /* no storage here */ } }
@@ -67,7 +67,7 @@
     music();
   }
   function onHide() {
-    hidden = document.hidden;
+    hidden = document.hidden || napping;
     if (hidden) {
       if (cur) { clearInterval(cur._fade); try { cur.pause(); } catch (e) { /* ignore */ } }
       if (ctx && ctx.state === 'running') ctx.suspend().catch(function () {});
@@ -85,6 +85,8 @@
       try { const o = JSON.parse(localStorage.getItem(KEY)); if (o) { if (o.music !== undefined) set.music = clamp(o.music); if (o.sfx !== undefined) set.sfx = clamp(o.sfx); } } catch (e) { /* defaults */ }
       ['pointerdown', 'keydown', 'touchend'].forEach(function (ev) { window.addEventListener(ev, unlock, { passive: true }); });
       document.addEventListener('visibilitychange', onHide);
+      document.addEventListener('apppause', function () { napping = true; onHide(); });        // sent by the Android app when it leaves the screen
+      document.addEventListener('appresume', function () { napping = false; onHide(); });
       window.addEventListener('pagehide', function () { if (cur) { try { cur.pause(); } catch (e) { /* ignore */ } } });
     },
     /* o: rate (pitch), gain */

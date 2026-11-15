@@ -911,6 +911,8 @@
     setInterval(saveLocal, 15000);
     document.addEventListener('visibilitychange', function () { if (document.hidden) { saveLocal(); pushCloud(); } else step(false); });
     window.addEventListener('pagehide', function () { saveLocal(); pushCloud(); });
+    document.addEventListener('apppause', function () { saveLocal(); });                      // the Android app going to the background
+    document.addEventListener('appresume', function () { step(false); });
     window.addEventListener('resize', function () { if (view.tab === 'tree') render(); });
     requestAnimationFrame(frame);
     initCloud();

@@ -19,6 +19,8 @@
 
 :root {
   color-scheme: dark;
+  /* room for the status bar and the gesture bar: the Android wrapper sets the first, browsers the second */
+  --sat: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)); --sab: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
   --gold-c: #f4cb5e; --mat-c: #e99a6c; --kn-c: #97b9ff;
   --good: #8fd06e; --warn: #f1b54a; --bad: #ff8068;
   /* age 1: oak, iron and gold leaf */
@@ -73,7 +75,7 @@
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; }
+html, body { height: 100%; margin: 0; touch-action: manipulation; }
 body {
   background: #000; color: var(--ink); font-family: var(--body); font-size: 14.5px; line-height: 1.35;
   -webkit-text-size-adjust: 100%; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
@@ -84,9 +86,9 @@ svg.ic { width: 1em; height: 1em; fill: currentColor; flex: 0 0 auto; display: b
 #app { height: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; position: relative; overflow: hidden; background: var(--tex), var(--bg); }
 
 /* ---------- the world view and its HUD ---------- */
-#world { flex: 0 0 auto; position: relative; height: min(54vw, 260px, 34vh); min-height: 168px; background: #6f9cc4; border-bottom: 1px solid var(--edge); box-shadow: 0 1px 0 var(--trim), 0 3px 8px rgba(0, 0, 0, .55); z-index: 2; }
+#world { flex: 0 0 auto; position: relative; height: calc(min(54vw, 260px, 34vh) + var(--sat)); min-height: 168px; background: #6f9cc4; border-bottom: 1px solid var(--edge); box-shadow: 0 1px 0 var(--trim), 0 3px 8px rgba(0, 0, 0, .55); z-index: 2; }
 #scene { display: block; width: 100%; height: 100%; }
-#hud { position: absolute; top: calc(6px + env(safe-area-inset-top, 0px)); left: 6px; right: 6px; display: flex; gap: 5px; align-items: stretch; }
+#hud { position: absolute; top: calc(6px + var(--sat)); left: 6px; right: 6px; display: flex; gap: 5px; align-items: stretch; }
 .res { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 5px; padding: 3px 6px 3px 4px; border-radius: 19px; background: rgba(10, 8, 6, .74); border: 1px solid rgba(0, 0, 0, .7); box-shadow: inset 0 0 0 1px var(--trim-dim), 0 1px 3px rgba(0, 0, 0, .5); }
 .res.hid { visibility: hidden; }
 .res .ic { font-size: 23px; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .7)); }
@@ -241,7 +243,7 @@ p { margin: 4px 0; }
 .chron time { color: var(--faint); font-variant-numeric: lining-nums tabular-nums; }
 
 /* ---------- navigation ---------- */
-#tabs { flex: 0 0 auto; display: flex; padding-bottom: env(safe-area-inset-bottom, 0px); background: linear-gradient(180deg, var(--panel-hi), var(--panel)); border-top: 1px solid var(--edge); box-shadow: inset 0 1px 0 var(--trim), 0 -3px 8px rgba(0, 0, 0, .5); z-index: 3; }
+#tabs { flex: 0 0 auto; display: flex; padding-bottom: var(--sab); background: linear-gradient(180deg, var(--panel-hi), var(--panel)); border-top: 1px solid var(--edge); box-shadow: inset 0 1px 0 var(--trim), 0 -3px 8px rgba(0, 0, 0, .5); z-index: 3; }
 #tabs[hidden] { display: none; }
 #tabs button { flex: 1 1 0; min-width: 0; position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 7px 0 6px; background: transparent; border: 0; cursor: pointer; font: 600 10.5px/1.1 var(--body); color: var(--faint); }
 #tabs button .ic { font-size: 27px; transition: transform .15s; }
@@ -255,11 +257,11 @@ p { margin: 4px 0; }
 #floaters { position: absolute; inset: 0; pointer-events: none; z-index: 31; overflow: hidden; }
 .float { position: absolute; transform: translate(-50%, -50%); font: 700 15px var(--body); font-variant-numeric: lining-nums; color: #fff; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, .8); white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; animation: rise 1s ease-out forwards; }
 .float .ic { font-size: 16px; }
-#toast { position: absolute; left: 12px; right: 12px; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); padding: 9px 12px; border-radius: var(--r); font-size: 13.5px; color: var(--ink); background: linear-gradient(180deg, var(--panel-hi), var(--inset)); border: 1px solid var(--edge); box-shadow: inset 0 0 0 1px var(--trim), 0 4px 12px rgba(0, 0, 0, .6); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .2s, transform .2s; z-index: 25; }
+#toast { position: absolute; left: 12px; right: 12px; bottom: calc(70px + var(--sab)); padding: 9px 12px; border-radius: var(--r); font-size: 13.5px; color: var(--ink); background: linear-gradient(180deg, var(--panel-hi), var(--inset)); border: 1px solid var(--edge); box-shadow: inset 0 0 0 1px var(--trim), 0 4px 12px rgba(0, 0, 0, .6); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .2s, transform .2s; z-index: 25; }
 #toast.on { opacity: 1; transform: none; }
 #modal { position: absolute; inset: 0; z-index: 20; display: flex; align-items: flex-end; background: var(--veil); }
 #modal[hidden] { display: none; }
-#sheet { position: relative; width: 100%; max-height: 86%; overflow-y: auto; padding: 14px 12px calc(16px + env(safe-area-inset-bottom, 0px)); border-radius: 14px 14px 0 0; background: var(--tex), var(--bg); border-top: 1px solid var(--edge); box-shadow: inset 0 1px 0 var(--trim-hi), inset 0 2px 0 var(--trim), 0 -6px 18px rgba(0, 0, 0, .6); animation: sheetIn .22s ease; }
+#sheet { position: relative; width: 100%; max-height: 86%; overflow-y: auto; padding: 14px 12px calc(16px + var(--sab)); border-radius: 14px 14px 0 0; background: var(--tex), var(--bg); border-top: 1px solid var(--edge); box-shadow: inset 0 1px 0 var(--trim-hi), inset 0 2px 0 var(--trim), 0 -6px 18px rgba(0, 0, 0, .6); animation: sheetIn .22s ease; }
 #sheet h2.sec:first-child { margin-top: 2px; }
 .sheethead { display: flex; align-items: center; gap: 11px; }
 .sheethead h3 { margin: 0; font-family: var(--display); font-weight: var(--display-w); font-size: calc(var(--h2) + 2px); letter-spacing: var(--track); color: var(--trim-hi); line-height: 1.1; }
