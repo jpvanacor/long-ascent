@@ -1,0 +1,57 @@
+name: Device test
+
+# Installs the released APK on Android emulators and walks through a few screens.
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Android app"]
+    types: [completed]
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/device-test.yml"
+      - "scripts/device-test.sh"
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [34, 35, 36]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download the released APK
+        run: curl -fsSL -o long-ascent.apk "https://github.com/${{ github.repository }}/releases/latest/download/long-ascent.apk"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install and play on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: false
+          script: bash scripts/device-test.sh long-ascent.apk
+
+      - name: Show the result
+        if: always()
+        run: cat device-test/result.txt || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: device-test-api${{ matrix.api }}
+          path: device-test/
