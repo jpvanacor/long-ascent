@@ -1,10 +1,10 @@
 /* Long Ascent: offline support for the web app. The game's code is fetched fresh whenever there is a network
    (and kept as a fallback), fonts, icons and sound are served from the cache once they have been seen.
    Raise CACHE together with APP_VERSION in index.html. */
-const CACHE = "long-ascent-v5";
+const CACHE = "long-ascent-v6";
 const SHELL = [
   "./", "./index.html", "./manifest.webmanifest", "./css/style.css",
-  "./js/icons.js", "./js/core.js", "./js/scene.js", "./js/city.js", "./js/fx.js", "./js/audio.js", "./js/ui.js",
+  "./js/icons.js", "./js/core.js", "./js/scene.js", "./js/town.js", "./js/city.js", "./js/fx.js", "./js/audio.js", "./js/ui.js",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png",
   "./fonts/archivo-latin-800-normal.woff2", "./fonts/besley-latin-800-normal.woff2", "./fonts/grenze-gotisch-latin-600-normal.woff2",
   "./fonts/ibm-plex-sans-latin-400-italic.woff2", "./fonts/ibm-plex-sans-latin-400-normal.woff2", "./fonts/ibm-plex-sans-latin-600-normal.woff2",

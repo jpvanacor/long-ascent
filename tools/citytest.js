@@ -16,7 +16,7 @@ const PORT = 8139, wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await p.clock.install({ time: new Date(snap.t + 36e3) });
   await p.goto('http://127.0.0.1:' + PORT + '/index.html');
   await p.waitForFunction(() => window.__la && document.fonts.status === 'loaded');
-  await p.evaluate((st) => { window.__la.scene.hour = 11; document.getElementById('turn').classList.remove('on'); st.seen = { council: 1, age: 1, edicts: 1, party2: 1 }; window.__la.set(st); }, snap.s);
+  await p.evaluate((st) => { window.__la.scene.hour = 11; document.getElementById('turn').classList.remove('on'); st.seen = { council: 1, age: 1, edicts: 1, party2: 1, party3: 1, town: 1, rank: st.rank }; st.news = []; st.ev.cur = null; st.ev.next = 1e15; st.goals = {}; for (const g of window.Core.GOALS) st.goals[g.id] = 1; window.__la.set(st); }, snap.s);
   const tick = async (ms) => { await p.clock.runFor(ms || 400); await wait(60); };
   const cityOn = () => p.evaluate(() => document.documentElement.classList.contains('city'));
   const sheetOn = () => p.evaluate(() => !document.getElementById('modal').hidden);
@@ -85,6 +85,59 @@ const PORT = 8139, wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok('Close puts the card away and keeps the city', !(await sheetOn()) && await cityOn());
   await p.clock.runFor(500); await p.screenshot({ path: path.join(root, 'shots', 'i04-city-built.png') });
 
+  // the town: the houses open its rank, a landmark opens its card, pegged ground can be built on
+  await p.evaluate(() => window.__la.scene.look('town')); await tick();
+  pt = await at('town');
+  const zz = (await cam()).z;
+  await p.touchscreen.tap(pt.x - 37 * zz, pt.y - 7.5 * zz); await tick();        // the roofs left of the cathedral
+  ok('a tap on the houses opens the town and its ranks', await sheetOn() && await p.locator('#sheet .stage.rk').count() === 10 && /The town/.test(await p.locator('#sheet h3').textContent()), await p.evaluate(() => document.querySelector('#sheet h3') && document.querySelector('#sheet h3').textContent));
+  await back();
+  await p.evaluate(() => window.__la.scene.look('lm:watch')); await tick();
+  pt = await at('lm:watch');
+  await p.touchscreen.tap(pt.x, pt.y); await tick();
+  ok('a tap on the watchtower opens its card', await sheetOn() && /Watchtower/.test(await p.locator('#sheet h3').textContent()) && /Built/.test(await p.locator('#sheet').textContent()));
+  await back();
+  await p.evaluate(() => { const s = window.__la.state; s.tech.t1_6 = 1; s.res.gold = 1e9; s.res.mat = 1e9; }); await tick(600);
+  const pegged = await p.evaluate(() => window.__la.scene.places().indexOf('lm:forge') >= 0);
+  await p.evaluate(() => window.__la.scene.look('lm:forge')); await tick();
+  pt = await at('lm:forge');
+  await p.screenshot({ path: path.join(root, 'shots', 'i06-city-peg.png') });
+  await p.touchscreen.tap(pt.x, pt.y); await tick();
+  ok('ground is pegged out for a landmark that can be built, and a tap opens it', pegged && await sheetOn() && await p.locator('#sheet [data-act="lm:forge"]:not([disabled])').count() === 1);
+  await p.locator('#sheet [data-act="lm:forge"]').tap(); await tick(300);
+  ok('building it there closes the card and raises the forge', !(await sheetOn()) && await cityOn() && await p.evaluate(() => !!window.__la.state.lm.forge));
+  await p.clock.runFor(1200); await p.screenshot({ path: path.join(root, 'shots', 'i07-city-forge.png') });
+
+  // a place the heroes found: a pennant on the far shore, a card, and an outpost once it is built
+  await p.evaluate(() => { const s = window.__la.state; s.disc.d1c = 1; }); await tick(600);
+  const flagged = await p.evaluate(() => window.__la.scene.places().indexOf('post:d1c') >= 0);
+  await p.evaluate(() => window.__la.scene.look('post:d1c')); await tick();
+  pt = await at('post:d1c');
+  await p.screenshot({ path: path.join(root, 'shots', 'i10-city-site.png') });
+  await p.touchscreen.tap(pt.x, pt.y); await tick();
+  ok('a site that was found is marked far from the walls, and a tap opens it', flagged && await sheetOn() && await p.locator('#sheet [data-act="post:d1c"]:not([disabled])').count() === 1, JSON.stringify(pt));
+  await p.locator('#sheet [data-act="post:d1c"]').tap(); await tick(300);
+  ok('building the outpost there closes the card and puts the place to use', !(await sheetOn()) && await cityOn() && await p.evaluate(() => window.__la.state.disc.d1c === 2));
+  await p.clock.runFor(1200); await p.screenshot({ path: path.join(root, 'shots', 'i11-city-outpost.png') });
+  await p.touchscreen.tap(pt.x, pt.y); await tick();
+  ok('and a tap on the outpost says what it gives', await sheetOn() && /Mine workings/.test(await p.locator('#sheet h3').textContent()) && /Materials/.test(await p.locator('#sheet').textContent()));
+  await back();
+
+  // news: a crier at the market cross, and its line in the list
+  await p.evaluate(() => { const s = window.__la.state; s.ev.next = 0; }); await tick(800);
+  const crier = await p.evaluate(() => window.__la.scene.places().indexOf('news') >= 0);
+  await p.evaluate(() => window.__la.scene.look('news')); await tick();
+  pt = await at('news');
+  await p.screenshot({ path: path.join(root, 'shots', 'i08-city-news.png') });
+  await p.touchscreen.tap(pt.x, pt.y); await tick();
+  ok('news brings a crier to the market, and a tap on him opens it', crier && await sheetOn() && await p.locator('#sheet [data-act="event:0"]').count() === 1 && await p.locator('#feed .tag[data-feed="news"]').count() === 1);
+  await p.screenshot({ path: path.join(root, 'shots', 'i09-city-news-sheet.png') });
+  const evBefore = await p.evaluate(() => window.__la.state.stats.events);
+  await p.locator('#sheet [data-act^="event:"]:not([disabled])').first().tap(); await tick(300);
+  ok('deciding it shows what came of it', await sheetOn() && await p.evaluate(() => window.__la.state.stats.events) === evBefore + 1 && /Continue/.test(await p.locator('#sheet').textContent()));
+  await p.locator('#sheet .btn.big').last().tap(); await tick();
+  ok('and Continue returns to the city', !(await sheetOn()) && await cityOn() && !(await p.evaluate(() => window.__la.scene.places().indexOf('news') >= 0)));
+
   // the list of what is going on
   const feed = await p.evaluate(() => Array.from(document.querySelectorAll('#feed .tag')).map((t) => t.dataset.feed + ': ' + t.textContent));
   ok('the list names the great work and the party', feed.some((f) => /^work:1/.test(f)) && feed.some((f) => /^keep/.test(f)), feed.join(' | '));
@@ -128,7 +181,7 @@ const PORT = 8139, wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok('and Back still closes them', !(await sheetOn()));
 
   // a stage of the great work is built from the city: the card steps aside
-  await p.evaluate(() => { const s = window.__la.state; s.res.gold = 1e12; s.res.mat = 1e12; s.res.kn = 1e12; }); await tick();
+  await p.evaluate(() => { const s = window.__la.state; s.res.gold = 1e12; s.res.mat = 1e12; s.res.kn = 1e12; s.work = 99; }); await tick();
   await p.locator('#expand').tap(); await tick();
   await p.evaluate(() => window.__la.scene.look('work:1')); await tick();
   const call = await p.locator('#feed .tag.go[data-feed="work:1"]').count();

@@ -384,19 +384,19 @@
     R(x - 7, y - 6.5, 14, 6.5, c); R(x + 1, y - 6.5, 6, 6.5, cd); P([x - 8, y - 6.5, x, y - 11, x + 8, y - 6.5], rf);
     R(x - 9.5, y - 10, 3.4, 10, c); P([x - 10, y - 10, x - 7.8, y - 13.6, x - 5.6, y - 10], rf); win(x - 8.6, y - 8.6, 1.4, 1.8, 0.4);
     win(x - 2, y - 4.6, 1.3, 2.8, 0.2); win(x + 2.6, y - 4.6, 1.3, 2.8, 0.6);
-    if (lv >= 2) { R(x + 7, y - 4, 12, 4, c); R(x + 13, y - 4, 6, 4, cd); P([x + 6.4, y - 4, x + 13, y - 6.6, x + 19.6, y - 4], rf); for (let i = 0; i < 3; i++) win(x + 8.6 + i * 3.4, y - 2.8, 1.5, 1.8, 0.15 + i * 0.3); }
+    if (lv >= 2) { R(x + 7, y - 4, 12, 4, c); R(x + 13, y - 4, 6, 4, cd); P([x + 6.4, y - 4, x + 13, y - 6.6, x + 19.6, y - 4], rf); for (let i = 0; i < 3; i++) win(x + 8.6 + i * 3.4, y - 2.8, 1.5, 1.8, 0.15 + i * 0.3); }      // the library
   }
   function university(lv) {
     const x = 234, y = 141, c = tone(C.plaster, 0.16), cd = dk(c, 0.87), rf = tone(C.terra, 0.16);
     R(x - 12, y - 9, 24, 9, c); R(x + 2, y - 9, 10, 9, cd); P([x - 13, y - 9, x - 10, y - 12, x + 10, y - 12, x + 13, y - 9], rf);
     R(x - 3.6, y - 14.5, 7.2, 3.4, c); Dome(x, y - 14.5, 4.4, 5, tone([104, 132, 122], 0.16)); Ln(x, y - 19.5, x, y - 22, tone([196, 164, 84], 0.14), 0.5);
     for (let i = 0; i < 6; i++) { R(x - 10.4 + i * 3.7, y - 4, 2, 4, tone([58, 52, 56], 0.16)); Dome(x - 9.4 + i * 3.7, y - 4, 1, 1.2, tone([58, 52, 56], 0.16)); win(x - 10.2 + i * 3.7, y - 7.8, 1.6, 1.8, 0.1 + i * 0.14); }
-    if (lv >= 2) { R(x + 12, y - 6.5, 9, 6.5, cd); P([x + 11.4, y - 6.5, x + 16.5, y - 9.6, x + 21.6, y - 6.5], rf); win(x + 14, y - 4.6, 1.5, 2, 0.35); win(x + 17.6, y - 4.6, 1.5, 2, 0.8); }
+    if (lv >= 1) { R(x + 12, y - 6.5, 9, 6.5, cd); P([x + 11.4, y - 6.5, x + 16.5, y - 9.6, x + 21.6, y - 6.5], rf); win(x + 14, y - 4.6, 1.5, 2, 0.35); win(x + 17.6, y - 4.6, 1.5, 2, 0.8); }      // the lecture hall
   }
   function observatory(lv) {
     const x = 282, y = 104.5, c = tone([228, 224, 214], 0.22);
     R(x - 5, y - 6, 10, 6, c); R(x + 1, y - 6, 4, 6, dk(c, 0.86)); Dome(x, y - 6, 5.6, 6, tone([150, 160, 168], 0.22)); R(x - 0.5, y - 12, 1, 6, tone([40, 44, 54], 0.2));
-    if (lv >= 2) { R(x - 13, y - 3.6, 8, 3.6, c); Dome(x - 9, y - 3.6, 3, 3.2, tone([150, 160, 168], 0.22)); }
+    if (lv >= 1) { R(x - 13, y - 3.6, 8, 3.6, c); R(x - 9.4, y - 5.2, 0.8, 1.6, tone([40, 44, 54], 0.2)); R(x - 13.4, y - 4.2, 8.8, 0.7, tone([150, 160, 168], 0.22)); }      // the transit room
   }
   function dish(x, y, r, dep) {
     const c = tone([232, 234, 238], dep);
@@ -406,7 +406,7 @@
   }
   function institute(lv) {
     const x = 262, y = 118, c = tone([236, 236, 232], 0.2);
-    if (lv >= 2) { R(x + 8, y - 12, 9, 12, c); R(x + 13, y - 12, 4, 12, dk(c, 0.86)); for (let r = 0; r < 3; r++) R(x + 9, y - 10.4 + r * 3.4, 7, 1.3, E.night > 0.1 ? GLOW : tone([70, 84, 104], 0.2), E.night > 0.1 ? E.night * 0.9 : 0.9); }
+    if (lv >= 1) { R(x + 8, y - 12, 9, 12, c); R(x + 13, y - 12, 4, 12, dk(c, 0.86)); for (let r = 0; r < 3; r++) R(x + 9, y - 10.4 + r * 3.4, 7, 1.3, E.night > 0.1 ? GLOW : tone([70, 84, 104], 0.2), E.night > 0.1 ? E.night * 0.9 : 0.9); }
     R(x - 12, y - 7, 22, 7, c); R(x + 2, y - 7, 8, 7, dk(c, 0.87)); R(x - 12, y - 7.8, 22, 0.9, tone([130, 136, 144], 0.2));
     for (let r = 0; r < 2; r++) R(x - 10.6, y - 5.6 + r * 2.8, 19.4, 1.2, E.night > 0.1 ? GLOW : tone([70, 84, 104], 0.2), E.night > 0.1 ? E.night * 0.9 : 0.9);
     dish(x - 17, y, 5, 0.2);
@@ -423,7 +423,7 @@
     R(x - 9, y - 11, 18, 11, c); R(x + 2, y - 11, 7, 11, cd); P([x - 10.4, y - 11, x, y - 16, x + 10.4, y - 11], c); P([x, y - 11, x, y - 16, x + 10.4, y - 11], cd); R(x - 10.4, y - 11.8, 20.8, 1, dk(c, 0.78));
     for (let i = 0; i < 5; i++) { R(x - 8 + i * 3.7, y - 10, 1.2, 9, dk(c, 1.06)); win(x - 6.3 + i * 3.7, y - 7.6, 1.5, 4.4, 0.2 + i * 0.15); }
     R(x - 10.4, y - 1.2, 20.8, 1.2, dk(c, 0.8));
-    if (lv >= 2) { Dome(x, y - 16, 3.4, 3.8, tone([120, 150, 140], 0.1)); }
+    if (lv >= 3) { R(x - 5, y - 13.6, 10, 2, c); Dome(x, y - 15.6, 3.4, 3.8, tone([120, 150, 140], 0.1)); Ln(x, y - 19.4, x, y - 22, tone(C.iron, 0.1), 0.3); }      // the head office
   }
   function exchange(lv) {
     const list = [[222, 134, 12, 44, 0.2], [206, 134, 10, 34, 0.55], [238, 134, 11, 39, 0.8]];
@@ -433,14 +433,6 @@
       for (let r = 0; r < Math.floor(h / 3); r++) for (let k = 0; k < 4; k++) if (E.night > 0.08 && ((r * 7 + k * 13 + i * 5) % 10) < 6) R(x - w / 2 + 1 + k * (w - 2) / 4, y - h + 2 + r * 3, 1.4, 1.5, GLOW, E.night);
       for (let k = 1; k < 4; k++) R(x - w / 2 + k * w / 4, y - h, 0.3, h, dk(c, 0.72), 0.7);
       if (i === 0) { Ln(x, y - h, x, y - h - 9, tone(C.iron, 0.2), 0.5); if (E.night > 0.2 && Math.sin(E.t * 2.2) > 0) Ci(x, y - h - 9, 0.9, [255, 70, 60], 1); }
-    }
-  }
-  function fields(n, lv) {
-    const cols = [C.wheat, C.crop, C.fallow, C.crop, C.wheat, [168, 184, 96], C.fallow];
-    for (let i = 0; i < n; i++) {
-      const x0 = 14 + i * 18.5, c = tone(cols[i % cols.length], 0.03);
-      P([x0, 161, x0 + 16.5, 161, x0 + 9.5, 197, x0 - 9, 197], c);
-      for (let k = 1; k < 4; k++) Ln(x0 + 16.5 * k / 4, 161, x0 - 9 + 18.5 * k / 4, 197, dk(c, 0.86), 0.45, 0.8);
     }
   }
   function farmstead(x, y, s) {
@@ -459,43 +451,42 @@
     Dome(x - 4, y, 17, 7.5, c); Dome(x + 2, y, 11, 7.2, dk(c, 0.88)); R(x - 21, y - 0.6, 34, 1.4, tone([150, 156, 166], 0.03)); for (let i = 0; i < 7; i++) win(x - 16 + i * 4, y - 3, 2.2, 1.4, 0.1 + i * 0.11);
     R(x - 26, y - 17, 1.6, 17, c); R(x - 28.4, y - 20, 6.4, 3.4, c); R(x - 27.8, y - 19.2, 5.2, 1.3, E.night > 0.1 ? CYAN : tone([70, 100, 130], 0.03), 0.95);
     P([x + 20, y + 4, x + 27, y - 3.6, x + 29.5, y - 3.6, x + 34, y + 4], c); P([x + 27, y - 3.6, x + 28.2, y - 8.5, x + 29.5, y - 3.6], c); P([x + 28, y + 4, x + 29.5, y - 3.6, x + 34, y + 4], dk(c, 0.84));
-    if (lv >= 2) { P([x + 40, y + 6, x + 45, y + 0.6, x + 47, y + 0.6, x + 50.5, y + 6], c); P([x + 45, y + 0.6, x + 46, y - 3, x + 47, y + 0.6], c); }
+    if (lv >= 1) { El(x + 46, y + 7, 9, 1.8, tone([150, 154, 160], 0.03)); P([x + 40, y + 6, x + 45, y + 0.6, x + 47, y + 0.6, x + 50.5, y + 6], c); P([x + 45, y + 0.6, x + 46, y - 3, x + 47, y + 0.6], c); Ln(x + 53, y + 7, x + 53, y - 6, tone(C.iron, 0.03), 0.5); Ln(x + 53, y - 3, x + 48, y - 1.4, tone(C.iron, 0.03), 0.3); }      // the second pad
   }
-  function lumber(x, y, lv) {
-    const c = tone([150, 110, 70], 0.03), e = tone([206, 176, 128], 0.03);
-    for (let p = 0; p < Math.min(3, lv + 0); p++) { const px = x + p * 13; for (let r = 0; r < 3; r++) for (let k = 0; k < 3 - r; k++) { Ci(px + k * 3.2 + r * 1.6, y - 1.5 - r * 2.7, 1.6, c); Ci(px + k * 3.2 + r * 1.6, y - 1.5 - r * 2.7, 0.8, e); } }
+  function lumber(x, y) {
+    const e = tone([206, 176, 128], 0.03);
     P([x - 16, y - 6.5, x - 9, y - 10, x - 2, y - 6.5], tone(dk(C.thatch, 0.85), 0.03)); Ln(x - 14.6, y - 6.5, x - 14.6, y, tone(C.timber, 0.03), 0.8); Ln(x - 3.4, y - 6.5, x - 3.4, y, tone(C.timber, 0.03), 0.8); R(x - 13, y - 2.6, 8, 0.9, tone(C.timber, 0.03));
     for (const sx of [x + 44, x + 51, x - 24]) El(sx, y + 2, 1.7, 0.8, e);
   }
   function masons(x, y, lv) {
     const c = tone([214, 208, 194], 0.03), cd = dk(c, 0.84), tb = tone(C.timber, 0.03);
-    for (let i = 0; i < 3 + lv; i++) { const bx = x + (i % 3) * 5.4 + (i > 2 ? 2.4 : 0), by = y - (i > 2 ? 3.4 : 0); R(bx, by - 3.2, 5, 3.2, c); R(bx + 3, by - 3.2, 2, 3.2, cd); }
+    if (lv < 2) { Ln(x - 12, y, x - 9, y - 5, tb, 0.7); Ln(x - 6, y, x - 9, y - 5, tb, 0.7); R(x - 13, y - 3.4, 8, 0.7, tb); return; }      // a sawhorse until the crane is raised
     Ln(x - 12, y, x - 8, y - 15, tb, 0.8); Ln(x - 4, y, x - 8, y - 15, tb, 0.8); Ln(x - 8, y - 15, x + 4, y - 19, tb, 0.7); Ln(x + 4, y - 19, x + 4, y - 9, tb, 0.3); R(x + 2.4, y - 9, 3.2, 2.4, c);
     ctx.strokeStyle = col(tb); ctx.lineWidth = 0.7; ctx.beginPath(); ctx.arc(x - 8, y - 4.4, 3.6, 0, TAU); ctx.stroke(); Ln(x - 11.6, y - 4.4, x - 4.4, y - 4.4, tb, 0.3); Ln(x - 8, y - 8, x - 8, y - 0.8, tb, 0.3);
   }
   function steelworks(x, y, lv) {
     const c = tone(dk(C.brick, 0.86), 0.03), cd = dk(c, 0.82), rf = tone([70, 74, 84], 0.03);
-    for (let n = 0; n < (lv >= 3 ? 2 : 1); n++) {
+    for (let n = 0; n < (lv >= 2 ? 2 : 1); n++) {
       const sx = x + n * 38, w = 34;
       R(sx, y - 11, w, 11, c); R(sx + w * 0.6, y - 11, w * 0.4, 11, cd);
       for (let i = 0; i < 4; i++) P([sx + i * w / 4, y - 11, sx + i * w / 4, y - 15.5, sx + (i + 1) * w / 4, y - 11], rf);
       for (let i = 0; i < 5; i++) win(sx + 2.4 + i * 6.2, y - 8, 3, 3.6, 0.1 + i * 0.13);
       R(sx + 13, y - 5, 6, 5, [255, 150, 60], 0.55 + 0.45 * E.night); if (E.night > 0.2) Ci(sx + 16, y - 3, 9, [255, 140, 60], 0.14 * E.night);
     }
-    const stacks = lv >= 2 ? [[x + 6, 27], [x + 13, 22], [x + 29, 30]] : [[x + 6, 26], [x + 29, 21]];
+    const stacks = lv >= 4 ? [[x + 6, 27], [x + 13, 22], [x + 29, 30]] : [[x + 6, 26], [x + 29, 21]];
     for (const s of stacks) { P([s[0] - 1.9, y - 11, s[0] - 1.3, y - s[1], s[0] + 1.3, y - s[1], s[0] + 1.9, y - 11], c); R(s[0] - 1.6, y - s[1], 3.2, 1.3, tone([52, 44, 44], 0.03)); smoke(s[0], y - s[1] - 1, 1.5, true, s[1] * 0.07); }
   }
   function refinery(x, y, lv) {
     const c = tone([198, 202, 208], 0.03), cd = dk(c, 0.82), pc = tone([120, 126, 136], 0.03);
     for (const t of [[x, 22], [x + 6, 29], [x + 12, 17]]) { R(t[0] - 1.6, y - t[1], 3.2, t[1], c); R(t[0] + 0.3, y - t[1], 1.3, t[1], cd); Dome(t[0], y - t[1], 1.6, 1.6, c); for (let k = 5; k < t[1]; k += 6) R(t[0] - 2.1, y - k, 4.2, 0.6, pc); if (E.night > 0.1) Ci(t[0], y - t[1] - 1.6, 0.7, GLOW, E.night); }
     for (let i = 0; i < 2; i++) R(x - 4, y - 5 - i * 4, 26, 0.7, pc);
-    for (let i = 0; i < (lv >= 2 ? 3 : 2); i++) { const tx = x + 23 + i * 9; Ci(tx, y - 5.4, 4.2, c); Ci(tx + 1.3, y - 4.6, 3, cd, 0.5); Ln(tx - 3, y, tx - 2, y - 2.6, pc, 0.5); Ln(tx + 3, y, tx + 2, y - 2.6, pc, 0.5); }
+    for (let i = 0; i < 2; i++) { const tx = x + 23 + i * 9; Ci(tx, y - 5.4, 4.2, c); Ci(tx + 1.3, y - 4.6, 3, cd, 0.5); Ln(tx - 3, y, tx - 2, y - 2.6, pc, 0.5); Ln(tx + 3, y, tx + 2, y - 2.6, pc, 0.5); }
     const fx = x - 8; Ln(fx, y, fx, y - 33, pc, 0.8);
     const fl = Scene.still ? 1 : 0.75 + 0.25 * Math.sin(E.t * 9); P([fx - 1.5, y - 33, fx + 0.6 * fl, y - 38.5 - 2 * fl, fx + 1.5, y - 33], [255, 170, 70], 0.95); Ci(fx, y - 35, 5.5, [255, 160, 70], 0.1 + 0.16 * E.night);
   }
   function fabricator(x, y, lv) {
     const c = tone(C.pearl, 0.03), cd = dk(c, 0.86);
-    for (let i = 0; i < Math.min(3, lv + 1); i++) {
+    for (let i = 0; i < 1 + (lv >= 1 ? 1 : 0) + (lv >= 3 ? 1 : 0); i++) {
       const dx = x + i * 17, r = 9 - i * 1.4;
       Dome(dx, y, r, r * 0.86, c); Dome(dx + r * 0.3, y, r * 0.7, r * 0.82, cd);
       ctx.strokeStyle = col(E.night > 0.1 ? CYAN : tone([120, 170, 200], 0.03), 0.85); ctx.lineWidth = 0.45; ctx.beginPath();
@@ -560,7 +551,7 @@
   };
   Scene.places = function () { return sites.map(function (q) { return q.id; }); };
   Scene.emit = function (kind, id) { events.push({ k: kind, id: id, t: Date.now() }); if (events.length > 24) events.shift(); };
-  Scene.kit = { W: W, H: H, C: C, GLOW: GLOW, CYAN: CYAN, mix: mix, dk: dk, col: col, clamp: clamp, tone: tone, R: R, P: P, Ci: Ci, El: El, Dome: Dome, Ln: Ln, win: win, smoke: smoke, sailShip: sailShip,
+  Scene.kit = { W: W, H: H, C: C, GLOW: GLOW, CYAN: CYAN, mix: mix, dk: dk, col: col, clamp: clamp, tone: tone, R: R, P: P, Ci: Ci, El: El, Dome: Dome, Ln: Ln, win: win, smoke: smoke, sailShip: sailShip, dish: dish, house: house,
     site: function (id, x, y, w, h) { sites.push({ id: id, x: x, y: y, w: w, h: h }); } };
 
   /* ---------- one frame ---------- */
@@ -570,7 +561,7 @@
     const seed = S.world || 1;
     if (seed !== layoutSeed) { layout = makeLayout(seed); layoutSeed = seed; }
     const now = new Date(tms), hour = Scene.hour !== null ? Scene.hour : now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
-    const age = S.age, n = function (id) { return S.b[id] || 0; }, lv = function (id) { const c = n(id); return c >= 50 ? 3 : c >= 10 ? 2 : c >= 1 ? 1 : 0; };
+    const age = S.age, n = function (id) { return S.b[id] || 0; }, lv = function (id) { return S.b[id] ? Core.doublings(S, Core.B[id]) : 0; };      // how many named buildings a kind has raised
     E = makeEnv(hour, age, tms / 1000 % 100000);
     let k, ox, oy;
     if (cam.on) { clampCam(); k = cam.z; ox = -cam.x * k; oy = -cam.y * k; }
@@ -582,11 +573,12 @@
     const stage = function (a) { return age > a ? 99 : age === a ? S.project : 0; };
     sites = [];
     const City = root.City && root.City.begin(E, ctx, S, Scene.facts || {}, stage) ? root.City : null;
+    const Town = root.Town && root.Town.begin(E, ctx, S, Scene.facts || {}, stage, lv) ? root.Town : null;
 
     sky(); if (City) City.sky();
     ridge(101, 30, 0, [96, 110, 144], 0.62, 127); ridge(110, 16, 4, [84, 104, 116], 0.46, 127);
     P([0, 116.6, 40, 114, 96, 114.6, 132, 116.8, 180, 118, 360, 118.4, 360, 122, 0, 122], tone([78, 100, 82], 0.4));
-    reactor(stage(4)); ark(stage(5), fx && fx.lift); if (City) City.far();
+    reactor(stage(4)); ark(stage(5), fx && fx.lift); if (Town) Town.far(); if (City) City.far();
     sea(); viaduct(stage(3), stage(3) >= 4);
     harbor(stage(2), age); if (City) City.bay();
     midland(); quays(stage(2));
@@ -596,32 +588,34 @@
     if (n('script')) put(121, function () { abbey(lv('script')); });
     if (n('obs')) put(104.5, function () { observatory(lv('obs')); });
     if (n('inst')) put(118, function () { institute(lv('inst')); });
-    if (n('array')) { put(99, function () { dish(338, 99.5, 6.5, 0.22); }); put(102, function () { dish(350, 103.5, 5, 0.2); }); if (lv('array') >= 2) put(101, function () { dish(327, 99, 4.6, 0.22); }); }
+    if (n('array')) { put(99, function () { dish(338, 99.5, 6.5, 0.22); }); if (lv('array') >= 1) put(102, function () { dish(350, 103.5, 5, 0.2); }); }
     const keepTrees = [1, 1, 0.85, 0.5, 0.42, 0.5][age] - Math.min(0.25, n('lumber') * 0.004);
     for (const t of layout.trees) if (t.u < keepTrees && !onRoad(t)) (function (t) { put(t.y, function () { tree(t, t.y < 150 ? 0.2 : 0.04); }); })(t);
     let total = 0; for (const b in S.b) total += S.b[b];
     const count = Math.min(layout.houses.length, 3 + Math.floor(1.7 * Math.sqrt(total)));
     for (let i = 0; i < count; i++) (function (h) {
+      if (Town && Town.taken(h)) return;                                  // a landmark stands here, or will
       const kind = Math.max(1, age - (h.u < 0.3 ? 1 : 0));
       put(h.y, function () { house(kind, h); });
     })(layout.houses[i]);
     put(150.5, function () { cathedral(stage(1)); });
     if (n('guild')) put(150.6, function () { guildhall(lv('guild')); });
     if (n('bank')) put(150.7, function () { bank(lv('bank')); });
-    if (n('exch')) put(134, function () { exchange(lv('exch')); });
+    if (n('exch')) put(134, function () { exchange(1 + (lv('exch') >= 2 ? 1 : 0) + (lv('exch') >= 3 ? 1 : 0)); });
     if (n('univ')) put(141, function () { university(lv('univ')); });
     if (stage(2) >= 3) put(143.4, arsenal);
     put(151, foreland);
     const farms = n('farm'), port = n('port');
-    if (farms) { put(161, function () { fields(Math.min(port ? 3 : 7, 2 + Math.floor(farms / 8)), lv('farm')); }); put(160.5, function () { farmstead(34, 160.5, 1.05); }); }
+    if (farms) put(160.5, function () { farmstead(34, 160.5, 1.05); });
     if (farms >= 20 && !port) put(163, function () { farmstead(92, 163, 1); });
-    if (farms >= 10) put(166, function () { windmill(port ? 8 : 133, port ? 163 : 166); });
+    if (lv('farm') >= 1) put(166, function () { windmill(port ? 8 : 133, port ? 163 : 166); });
     if (port) put(186, function () { spaceport(lv('port')); });
-    if (n('lumber') && age <= 2) put(176, function () { lumber(292, 176, lv('lumber')); });
+    if (n('lumber') && age <= 2) put(176, function () { lumber(292, 176); });
     if (n('mason') && age <= 3) put(188, function () { masons(age === 3 ? 228 : 262, 188, lv('mason')); });
     if (n('steel')) put(171, function () { steelworks(250, 171, lv('steel')); });
     if (n('refin')) put(191, function () { refinery(304, 191, lv('refin')); });
     if (n('fab')) put(193, function () { fabricator(224, 193, lv('fab')); });
+    if (Town) Town.draw(put, events);
     if (City) City.town(put, { count: count, total: total, events: events, lift: fx && fx.lift });
     items.sort(function (a, b) { return a.y - b.y; });
     for (const it of items) it.f();

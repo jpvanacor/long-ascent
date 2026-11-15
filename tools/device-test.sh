@@ -18,10 +18,11 @@ dump() {
   done
   return 1
 }
-# centre of the first thing on screen whose text or description contains $1
-find_node() { python3 - "$1" "$OUT/ui.xml" <<'PY'
+# centre of the first thing on screen whose text or description contains $1 (or is exactly $1, with "exact" as $2)
+find_node() { python3 - "$1" "$OUT/ui.xml" "${2:-}" <<'PY'
 import re, sys
-want, path = sys.argv[1], sys.argv[2]
+want, path, exact = sys.argv[1], sys.argv[2], sys.argv[3] == 'exact'
+hit = (lambda s: s.strip() == want) if exact else (lambda s: want in s)
 try:
     xml = open(path, encoding='utf-8', errors='ignore').read()
 except OSError:
@@ -30,7 +31,7 @@ for m in re.finditer(r'<node [^>]*>', xml):
     n = m.group(0)
     t = re.search(r' text="([^"]*)"', n); d = re.search(r' content-desc="([^"]*)"', n)
     b = re.search(r' bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
-    if b and ((t and want in t.group(1)) or (d and want in d.group(1))):
+    if b and ((t and hit(t.group(1))) or (d and hit(d.group(1)))):
         x1, y1, x2, y2 = map(int, b.groups())
         print((x1 + x2) // 2, (y1 + y2) // 2)
         sys.exit(0)
@@ -54,7 +55,7 @@ for m in re.finditer(r'<node [^>]*>', xml):
 print(' | '.join(s[:36] for s in seen[:14]) or '(nothing readable)')
 PY
 }
-tap_text() { dump; local p; if p=$(find_node "$1"); then adb shell input tap $p; say "tapped '$1' at $p"; return 0; fi; say "NOT FOUND on screen: '$1'. On screen: $(texts)"; return 1; }
+tap_text() { dump; local p; if p=$(find_node "$1" "${2:-}"); then adb shell input tap $p; say "tapped '$1' at $p"; return 0; fi; say "NOT FOUND on screen: '$1'. On screen: $(texts)"; return 1; }
 # A slow emulator sometimes shows "... isn't responding". If it names the game, that is a finding: note it and wait.
 # If it names something else (the emulator's own home screen, usually), close that so the test can go on.
 calm() {
@@ -123,6 +124,20 @@ dump; say "menu still open after Back: $(find_node 'Start over' >/dev/null && ec
 say "in front after Back: $(front)"
 # a second opening, to tell a slow first drawing from a slow sheet
 if tap_text "Menu" >/dev/null; then sleep 0.4; shot 05d-menu-again-early; sleep 1; shot 05e-menu-again-later; adb shell input keyevent KEYCODE_BACK; sleep 2; fi
+# the first goal and the Town tab: five farmsteads put the hamlet on the map
+dump
+if wp=$(find_node "Work the land"); then for i in $(seq 1 75); do adb shell input tap $wp; sleep 0.12; done; else say "NOT FOUND on screen: 'Work the land'"; fi
+dump
+if bp=$(find_node "Buy 1"); then for i in 1 2 3 4; do adb shell input tap $bp; sleep 0.9; done; else say "NOT FOUND on screen: 'Buy 1'"; fi
+sleep 1.5; shot 11-five-farmsteads
+dump; say "goal reached and offered: $(find_node 'Claim' >/dev/null && echo yes || echo no)"
+tap_text "Claim" >/dev/null; sleep 1
+sleep 4      # the line that says the Town tab is open has gone by now
+if tap_text "Town" exact >/dev/null; then
+  sleep 1.5; shot 12-town
+  dump; say "Town tab: $(find_node 'Village at' >/dev/null && echo 'shows the hamlet and the next rank' || echo 'NO RANK SHOWN'), $(find_node 'Landmarks' >/dev/null && echo 'lists landmarks' || echo 'NO LANDMARKS'), $(find_node 'pages' >/dev/null && echo 'has the chronicle' || echo 'NO CHRONICLE')"
+  tap_text "Realm" exact >/dev/null; sleep 1
+else say "Town tab: NOT OFFERED after five farmsteads ($(texts | cut -c1-200))"; fi
 # the city view: the picture opens to the whole screen, can be dragged, its places can be touched, Back closes it
 if tap_text "Your settlement"; then
   sleep 2.5; shot 08-city
@@ -132,7 +147,7 @@ if tap_text "Your settlement"; then
   adb shell input tap 540 1520; sleep 2; shot 10-city-touched
   dump; say "a touch on the houses opened: $(find_node 'The town' >/dev/null && echo 'The town' || texts)"
   adb shell input keyevent KEYCODE_BACK; sleep 2
-  dump; say "after Back: card $(find_node 'houses' >/dev/null && echo 'still open' || echo closed), city $(find_node 'Close the city' >/dev/null && echo 'still open' || echo closed)"
+  dump; say "after Back: card $(find_node 'live here' >/dev/null && echo 'still open' || echo closed), city $(find_node 'Close the city' >/dev/null && echo 'still open' || echo closed)"
   adb shell input keyevent KEYCODE_BACK; sleep 2
   if front | grep -q "$PKG"; then dump; say "after Back again: city $(find_node 'Close the city' >/dev/null && echo 'still open' || echo closed), the game is still in front"
   else say "after Back again: THE GAME LEFT THE SCREEN instead of closing the city ($(front))"; adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1; sleep 4; fi

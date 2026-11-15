@@ -273,9 +273,12 @@
   City.town = function (put, info) {
     const t = T0, city = E.city, day = clamp((E.L - 0.3) / 0.5, 0.1, 1), nowMs = E.ms;
     const edict = S.edict && S.edict.until > nowMs ? S.edict.id : null;
+    const fest = info.events.some(function (ev) { return ev.k === 'rank' && nowMs - ev.t < 9000; });      // the town has just grown a rank
+    const share = function (job) { return F.jobs ? 0.45 + 0.16 * (F.jobs[job] || 0) : 1; };              // more hands where the people have been sent
 
     /* places that can be touched, back to front */
     site('town', 118, 120, 138, 31);
+    if (root.Town) root.Town.sites();
     for (let a = 1; a <= Math.min(5, age); a++) if (a < age || F.projectOpen || S.project > 0) { const w = WORK[a]; site('work:' + a, w[0], w[1], w[2], w[3]); }
     for (const b of Core.BUILDINGS) { const q = spot(b.id); if (q && (n(b.id) || (F.plots || []).indexOf(b.id) >= 0)) site('b:' + b.id, q[0], q[1], q[2], q[3]); }
     site('keep', 291, 63, 38, 34);
@@ -283,7 +286,6 @@
     /* the street: a well or a fountain, lamps, goods by the guild */
     put(153.3, function () { well(168.5, 153.3); });
     if (age >= 3) for (const x of [124, 146, 204, 226, 248]) put(151.2, function () { lamp(x, 151.5); });
-    if (n('guild') && E.z > 1.6) put(151.3, function () { const d = dp(151.6); for (let i = 0; i < 3; i++) R(141 + i * 1.9, 150.3 - (i === 1 ? 0.9 : 0), 1.6, 1.4 + (i === 1 ? 0.9 : 0), tone(i % 2 ? [150, 110, 70] : [176, 140, 96], d)); Ci(148.6, 150.9, 0.8, tone([120, 86, 56], d)); });
 
     /* townsfolk walking the street; fewer after dark, more at a fair */
     const out = Math.round(clamp(info.count * 0.85 + (edict === 'fair' ? 8 : 0), 3, 34) * day);
@@ -292,10 +294,11 @@
       let p = (t * v + hh(i, 4) * 2 * len) % (2 * len); const dir = p < len ? 1 : -1; if (p >= len) p = 2 * len - p;
       const x = a + p, y = 151.9 + hh(i, 5) * 2.4, o = folk(i, 6);
       o.act = 'walk'; o.ph = t * v * 2.4 + i; o.dir = dir; o.lamp = hh(i, 9) < 0.4; if (hh(i, 10) < 0.16) { o.act = 'carry'; o.load = [176, 140, 96]; }
+      if (fest && i % 2 === 0) { o.act = 'cheer'; o.ph = t * 6 + i; }
       put(y, function () { man(x, y, sy(y), o); });
     }
     /* carts and, later, cars on the road out of town */
-    const wheels = age >= 4 ? 4 : Math.min(3, 1 + Math.floor(info.total / 30)) + (edict === 'levy' ? 2 : 0), kind = age;
+    const wheels = (age >= 4 ? 4 : Math.min(3, 1 + Math.floor(info.total / 30)) + (edict === 'levy' ? 2 : 0)) + Math.min(3, F.routes || 0), kind = age;      // every route found puts another cart on the road
     for (let i = 0; i < wheels; i++) {
       const per = (age >= 4 ? 15 : age === 3 ? 26 : 40) + i * 7, q = t / per + hh(i, 11) * 3, f = q % 1, outb = (Math.floor(q) + i) % 2 === 0, u = outb ? f : 1 - f, pt = roadAt(u), side = (outb ? 1 : -1) * (age >= 4 ? 1.5 : 0.9);
       put(pt.y, function () { cart(pt.x + side * sy(pt.y), pt.y, sy(pt.y) * (kind <= 2 ? 0.8 : 0.9), outb ? 1 : -1, kind === 3 && i % 2 ? 2 : kind, t * 4 + i, hh(i, 12)); });
@@ -308,8 +311,8 @@
     /* the fields: hands at work, beasts at grass */
     const farms = n('farm'), port = n('port');
     if (farms) {
-      const rows = Math.min(port ? 3 : 7, 2 + Math.floor(farms / 8)), hands = Math.round(Math.min(7, 1 + farms / 6) * (0.3 + 0.7 * day));
-      for (let i = 0; i < hands; i++) { const fi = i % rows, y = 166 + hh(i, 21) * 26, x = 14 + fi * 18.5 + 3 + hh(i, 22) * 9 - (y - 161) * 0.26; put(y, function () { worker(i, x, y, age >= 4 ? 'shovel' : 'hoe', 0.95, 2.6 + hh(i, 23)); }); }
+      const cols = port ? 3 : 7, tilled = Math.min(farms, cols * 6), rows = Math.min(cols, tilled), deep = Math.ceil(tilled / cols) * 6, hands = Math.round(Math.min(9, 1 + farms / 6) * (0.3 + 0.7 * day) * share('gold'));
+      for (let i = 0; i < hands; i++) { const fi = i % rows, y = 162.6 + hh(i, 21) * Math.max(1, deep - 3), x = 14 + fi * 18.5 + 3 + hh(i, 22) * 9 - (y - 161) * 0.26; put(y, function () { worker(i, x, y, age >= 4 ? 'shovel' : 'hoe', 0.95, 2.6 + hh(i, 23)); }); }
       if (age <= 4 && farms >= 3) for (let i = 0; i < Math.min(4, 1 + Math.floor(farms / 12)); i++) { const x = (port ? 44 : 60) + i * 9 + hh(i, 24) * 3, y = 156.6 + hh(i, 25) * 1.6; put(y, function () { beast('cow', x, y, 0.8, i % 2 ? 1 : -1, 0); }); }
       if (E.z > 1.6 && !port) for (let i = 0; i < 2; i++) put(159.2, function () { const d = dp(159); Dome(112 + i * 5, 159.4, 2, 2.4, tone([214, 186, 104], d)); });    // ricks
     }
@@ -319,9 +322,9 @@
     }
 
     /* work at the places the realm owns */
-    const crews = function (id, k, f) { const c = n(id); if (c) for (let i = 0; i < Math.round(Math.min(k, 1 + c / 8) * (0.4 + 0.6 * day)); i++) f(i); };
-    if (age <= 2) crews('lumber', 4, function (i) { const x = 310 + i * 6.5 + hh(i, 31) * 2, y = 177.5 + (i % 2) * 2.4; put(y, function () { worker(i, x, y, 'axe', 1, 3.6); }); });
-    if (age <= 3) crews('mason', 3, function (i) { const x = (age === 3 ? 228 : 262) + 3 + i * 6, y = 189 + (i % 2) * 1.2; put(y, function () { worker(i, x, y, 'hammer', 1, 4.2); }); });
+    const crews = function (id, k, f) { const c = n(id); if (c) for (let i = 0; i < Math.round(Math.min(k + 1, (1 + c / 8) * share(Core.B[id].res)) * (0.4 + 0.6 * day)); i++) f(i); };
+    if (age <= 2) crews('lumber', 4, function (i) { const x = 300 + i * 7.5 + hh(i, 31) * 2, y = 182.6 + (i % 2) * 1.4; put(y, function () { worker(i, x, y, 'axe', 1, 3.6); }); });
+    if (age <= 3) crews('mason', 3, function (i) { const x = (age === 3 ? 228 : 262) + 3 + i * 6, y = 189.4 + (i % 2) * 1.2; put(y, function () { worker(i, x, y, 'hammer', 1, 4.2); }); });
     crews('script', 2, function (i) { const x = 256 + ((t * 0.6 + i * 9) % 18), y = 122 + i * 0.6; put(y, function () { man(x, y, sy(y), { c: [84, 66, 54], hat: 1, act: 'walk', ph: t * 2 + i, dir: 1 }); }); });
     crews('univ', 3, function (i) { const x = 226 + i * 6 + Math.sin(t * 0.3 + i * 2) * 2.5, y = 142.3 + (i % 2) * 0.7; put(y, function () { man(x, y, sy(y), { c: [40, 40, 52], hat: age >= 3 ? 3 : 2, act: i ? 'stand' : 'talk', ph: t * 3, dir: i % 2 ? -1 : 1 }); }); });
     crews('steel', 3, function (i) { const x = 254 + ((t * 1.1 + i * 11) % 30), y = 172.6 + i * 0.9; put(y, function () { man(x, y, sy(y), { c: [70, 62, 58], hat: age >= 4 ? 4 : 0, act: 'carry', load: [150, 152, 158], ph: t * 3 + i, dir: 1 }); }); });
@@ -376,7 +379,18 @@
       if (r.result === 'win') put(155.9, function () { const d = dp(156); R(178, 154.6, 2.2, 1.4, tone([150, 104, 60], d)); R(178, 154.4, 2.2, 0.5, tone([230, 196, 70], d)); });
     }
 
+    /* news waiting at the market cross: a crier with a bell */
+    if (F.news) {
+      site('news', 243, 144.5, 13, 10);
+      put(153.2, function () { man(247.2, 153.2, sy(153.2) * 1.05, { c: [150, 52, 48], hat: age >= 4 ? 0 : 2, act: 'cheer', ph: t * 5, dir: -1, flag: [230, 196, 70] }); });
+    }
+    /* items kept in the town stand on plinths before the great door */
+    for (let i = 0; i < Math.min(4, F.kept || 0); i++) put(154.3, function () { const x = 197 + i * 2.8, d = dp(154.3); R(x - 0.8, 153.2, 1.6, 1.1, tone(PAL.stone, d)); R(x - 1, 153, 2, 0.3, tone(PAL.stoneD, d)); Ci(x, 152.5, 0.55, tone([230, 196, 70], d)); if (!Scene.still && Math.sin(E.t * 1.7 + i * 2) > 0.86) Ci(x + 0.3, 152.2, 0.3, [255, 255, 255], 0.9); });
+
     /* an edict in force changes the street */
+    if (fest) {
+      put(150.95, function () { bunting(126, 170, 151.4); bunting(204, 248, 151.4); });
+    }
     if (edict === 'fair') {
       put(150.95, function () { bunting(158, 200, 151.4); });
       [[152, [196, 60, 50]], [178, [62, 110, 170]], [205, [90, 150, 110]]].forEach(function (q) { put(151.6, function () { stall(q[0], 151.7, q[1]); }); });
@@ -399,6 +413,9 @@
       const a = (nowMs - ev.t) / 1000;
       if (a < 0) continue;
       if (ev.k === 'buy' && a < 2) { const q = spot(ev.id) && stand(ev.id); if (q) put(q[1] + 0.6, function () { dust(q[0], q[1], 12 * sy(q[1]), a / 2); }); }
+      else if (ev.k === 'mark' && a < 3) { const q = spot(ev.id) && stand(ev.id); if (q) put(q[1] + 0.7, function () { dust(q[0] + 6, q[1], 18 * sy(q[1]), a / 3); }); }
+      else if (ev.k === 'post' && a < 3) { const q = root.Town && root.Town.post(ev.id); if (q && !q[4]) put(q[1] + 0.7, function () { dust(q[0], q[1], 9, a / 3); }); }
+      else if (ev.k === 'lm' && a < 3) { const q = root.Town && root.Town.at(ev.id); if (q) put(q[1] + 0.7, function () { dust(q[0], q[1], Math.max(10, q[2]) * sy(q[1]), a / 3); }); }
       else if (ev.k === 'work' && a < 0.55) put(170.2, function () { man(118, 170, sy(170), { c: COATS[age][0], hat: age >= 4 ? 4 : 1, act: 'work', tool: 'hoe', ph: 0.4 + a / 0.55 * 2.6, dir: 1 }); Ci(121, 168.5 - a * 9, 0.7, [244, 203, 94], 1 - a / 0.55); });
     }
   };
@@ -414,7 +431,7 @@
 
   /* the gang on the great work */
   function crew(put) {
-    const st = S.project, k = F.stageReady ? 5 : 3;
+    const st = S.project, k = F.stageReady ? 5 : F.building > 0 ? Math.max(2, Math.min(6, Math.round(F.building))) : 1;      // as many hands as there is work an hour
     const hand = function (i, x, y, tool, s) { put(y + 0.02, function () { worker(i + 3, x, y, tool, s, 3 + (i % 3) * 0.6); }); };
     if (age === 1) {
       if (st === 0) for (let i = 0; i < k; i++) hand(i, 173 + i * 6.4, 151.5 + (i % 2) * 0.5, i % 2 ? 'shovel' : 'pick');
@@ -458,6 +475,9 @@
     if (F.heroMark) { const hm = (F.home || []).length; if (hm) mark(160.5 - hm * 1.15, 149.2, [255, 154, 140]); else mark(310, 64, [255, 154, 140]); }
     if (F.trial) { const q = age === 1 ? [244, 86] : age === 2 ? [24, 112] : [166, 104]; mark(q[0], q[1], [255, 90, 70]); }
     if (E.city) for (const id of F.plots || []) { const q = spot(id) && stand(id); if (q) mark(q[0], q[1] - 5 * sy(q[1]), [240, 236, 220]); }
+    if (E.city) for (const id of F.lmOpen || []) { const q = root.Town && root.Town.at(id); if (q) mark(q[0], q[1] - 6 * sy(q[1]), [240, 236, 220]); }
+    if (F.news) mark(247.2, 147.4, [255, 214, 110]);
+    if (E.city && root.Town) for (const id in F.sites || {}) if (F.sites[id] === 1) { const q = root.Town.post(id); if (q) mark(q[0], q[1] - (q[4] ? q[3] / 2 + 3.4 : 6), [240, 236, 220]); }
     for (const ev of events) {
       const a = (nowMs - ev.t) / 1000;
       if (a < 0) continue;
@@ -476,6 +496,16 @@
         Ci(q[0], q[1] + 10, 3 + g * 16, [151, 185, 255], 0.22 * (1 - g));
         for (let i = 0; i < 9; i++) { const f = (g * 1.4 + hh(i, 91) * 0.5) % 1; Ci(q[0] + (hh(i, 92) - 0.5) * 16, q[1] + 12 - f * 26, 0.5, [220, 232, 255], (1 - f) * (1 - g)); }
       } else if (ev.k === 'recruit' && a < 1.6) { const g = a / 1.6; ctx.strokeStyle = col([255, 154, 140], 1 - g); ctx.lineWidth = 0.5; ctx.beginPath(); ctx.arc(160, 152, 2 + g * 12, 0, TAU); ctx.stroke(); }
+      else if (ev.k === 'news' && a < 2) { const g = a / 2; ctx.strokeStyle = col([255, 214, 110], 1 - g); ctx.lineWidth = 0.5; ctx.beginPath(); ctx.arc(249.5, 150, 2 + g * 16, 0, TAU); ctx.stroke(); }
+      else if (ev.k === 'rank' && a < 6) {                 // rockets over the town
+        for (let i = 0; i < 5; i++) {
+          const b = a - i * 0.7; if (b < 0 || b > 2.2) continue;
+          const x = 140 + hh(i, 85) * 100, y = 112 - hh(i, 86) * 22, c = [[201, 162, 255], [255, 214, 110], [255, 255, 255], [150, 200, 255]][i % 4];
+          if (b < 0.5) { Ln(x, y + 26 * (1 - b / 0.5), x, y + 26 * (1 - b / 0.5) + 4, c, 0.5, 0.95); continue; }
+          const g = (b - 0.5) / 1.7, rr = 3 + (1 - Math.pow(1 - g, 2.2)) * 12;
+          for (let k = 0; k < 16; k++) { const an = k / 16 * TAU + i; Ci(x + Math.cos(an) * rr, y + Math.sin(an) * rr + g * g * 6, 0.8 * (1 - g * 0.45), c, 1 - g * g); }
+        }
+      }
       else if (ev.k === 'edict' && a < 2) { const g = a / 2; ctx.strokeStyle = col([201, 162, 255], 1 - g); ctx.lineWidth = 0.6; ctx.beginPath(); ctx.arc(176, 150, 3 + g * 40, 0, TAU); ctx.stroke(); }
     }
   };

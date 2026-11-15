@@ -38,7 +38,22 @@ const shots = [
   ['32-tall-a3-realm', 'a3', 0.2, then(tab('realm'), tap('#panel .btn.alt')), 2300],
   ['33-tall-a5-heroes', 'a5', 9.5, tab('heroes'), 3400],
   ['34-tall-a4-age', 'a4', 0.2, tab('age'), 2000],
-  ['35-tall-a5-legacy', 'a5_end', 0.01, tab('legacy'), 1700]
+  ['35-tall-a5-legacy', 'a5_end', 0.01, tab('legacy'), 1700],
+  ['40-a1-town', 'a1_first', 0.001, tab('town')],
+  ['41-tall-a1-town', 'a1_mid', 0.02, tab('town'), 1900],
+  ['42-event', 'a1_mid', 2, then(tab('realm'), tap('[data-act="event"]'))],
+  ['43-event-answer', 'a1_mid', 2, then(tab('realm'), tap('[data-act="event"]'), tap('[data-act="event:0"]'))],
+  ['44-rank-sheet', 'a2', 0.5, then(tab('town'), tap('.card.feature .tile'))],
+  ['45-chronicle', 'a2', 0.5, then(tab('town'), tap('[data-act="chronicle"]'))],
+  ['46-item-sheet', 'a3', 0.2, then(tab('heroes'), tap('[data-item="r1b"]'))],
+  ['47-landmark-sheet', 'a2', 0.5, then(tab('town'), tap('.card.shadow .tile'))],
+  ['48-tech-opens', 'a2', 0.5, then(tab('tree'), tap('.node.open'))],
+  ['49-tall-a2-town', 'a2', 0.5, tab('town'), 2300],
+  ['50-tall-a3-heroes', 'a3', 0.2, tab('heroes'), 4200],
+  ['51-tall-a1-realm', 'a1_mid', 0.02, tab('realm'), 1500],
+  ['52-new-realm-goals', null, 0, then(tap('#turn'), async (p) => { for (let i = 0; i < 80; i++) await p.locator('[data-act="work"]').click(); for (let i = 0; i < 5; i++) await p.locator('[data-act="buy:farm"]').click(); })],
+  ['53-building-info', 'a1_mid', 0.02, then(tab('realm'), tap('.card.row .tile.k-gold'))],
+  ['54-tall-a2-age', 'a2', 0.5, tab('age'), 2100]
 ].filter((s) => !filter || s[0].indexOf(filter) >= 0);
 (async () => {
   const srv = spawn(process.execPath, [path.join(__dirname, 'serve.js'), String(PORT)], { stdio: 'ignore' });
@@ -54,7 +69,7 @@ const shots = [
     await p.clock.setFixedTime(new Date(t));
     await p.goto('http://127.0.0.1:' + PORT + '/index.html');
     await p.waitForFunction(() => window.__la && document.fonts.status === 'loaded');
-    if (snap) await p.evaluate((st) => { st.seen = { council: 1, age: 1, edicts: 1, party2: 1 }; document.getElementById('turn').classList.remove('on'); window.__la.set(st); }, snap.s);
+    if (snap) await p.evaluate((st) => { st.seen = { council: 1, age: 1, edicts: 1, party2: 1, party3: 1, town: 1, city: 1, rank: st.rank }; st.news = []; document.getElementById('turn').classList.remove('on'); window.__la.set(st); }, snap.s);
     await p.waitForTimeout(350);
     try { if (sh[3]) await sh[3](p); } catch (e) { errs.push(sh[0] + ': step failed: ' + String(e).split('\n')[0]); }
     await p.waitForTimeout(450);
