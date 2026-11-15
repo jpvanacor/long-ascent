@@ -10,7 +10,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/device-test.yml"
-      - "scripts/device-test.sh"
+      - "tools/device-test.sh"
 
 permissions:
   contents: read
@@ -44,7 +44,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: false
-          script: bash scripts/device-test.sh long-ascent.apk
+          script: bash tools/device-test.sh long-ascent.apk
 
       - name: Show the result
         if: always()
