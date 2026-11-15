@@ -28,5 +28,6 @@ module.exports = {
   'ui.world': 'earth-america', 'ui.legacy': 'polar-star', 'ui.store': 'warehouse', 'ui.power': 'swords-power', 'ui.scroll': 'scroll-unfurled', 'ui.trophy': 'trophy',
   'ui.hp': 'hearts', 'ui.atk': 'broadsword', 'ui.heal': 'healing', 'ui.trash': 'trash-can', 'ui.copy': 'files', 'ui.load': 'load', 'ui.odds': 'on-target', 'ui.help': 'help',
   'ui.away': 'path-distance', 'ui.tree': 'tree-growth', 'ui.village': 'village', 'ui.climb': 'mountain-climbing', 'ui.flag': 'flying-flag',
+  'ui.expand': 'expand', 'ui.shrink': 'contract', 'ui.zoom': 'magnifying-glass',
   'age.1': 'stone-tower', 'age.2': 'galleon', 'age.3': 'gears', 'age.4': 'radio-tower', 'age.5': 'ringed-planet'
 };

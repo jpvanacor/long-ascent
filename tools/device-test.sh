@@ -123,6 +123,19 @@ dump; say "menu still open after Back: $(find_node 'Start over' >/dev/null && ec
 say "in front after Back: $(front)"
 # a second opening, to tell a slow first drawing from a slow sheet
 if tap_text "Menu" >/dev/null; then sleep 0.4; shot 05d-menu-again-early; sleep 1; shot 05e-menu-again-later; adb shell input keyevent KEYCODE_BACK; sleep 2; fi
+# the city view: the picture opens to the whole screen, can be dragged, its places can be touched, Back closes it
+if tap_text "Your settlement"; then
+  sleep 2.5; shot 08-city
+  dump; say "city open: $(find_node 'Close the city' >/dev/null && echo yes || echo no)"
+  adb shell input swipe 850 1500 250 1500 400; sleep 1.5; shot 09-city-dragged
+  adb shell input swipe 250 1500 850 1500 400; sleep 1.2
+  adb shell input tap 540 1520; sleep 2; shot 10-city-touched
+  dump; say "a touch on the houses opened: $(find_node 'The town' >/dev/null && echo 'The town' || texts)"
+  adb shell input keyevent KEYCODE_BACK; sleep 2
+  dump; say "after Back: card $(find_node 'houses' >/dev/null && echo 'still open' || echo closed), city $(find_node 'Close the city' >/dev/null && echo 'still open' || echo closed)"
+  adb shell input keyevent KEYCODE_BACK; sleep 2
+  dump; say "after Back again: city $(find_node 'Close the city' >/dev/null && echo 'still open' || echo closed), in front: $(front)"
+fi
 sleep 1; say "sound sources playing in front: $(players)"
 adb shell input keyevent KEYCODE_HOME; sleep 5
 say "sound sources playing after Home: $(players)"

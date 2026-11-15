@@ -58,6 +58,12 @@ const shots = [
     await p.waitForTimeout(350);
     try { if (sh[3]) await sh[3](p); } catch (e) { errs.push(sh[0] + ': step failed: ' + String(e).split('\n')[0]); }
     await p.waitForTimeout(450);
+    if (sh[0] === '07-a1-away') {            // the amounts must have counted up to what was earned
+      await p.waitForTimeout(1300);
+      const shown = await p.evaluate(() => Array.from(document.querySelectorAll('#sheet .gains b')).map((b) => b.textContent));
+      if (shown.length !== 3 || shown.some((v) => /^\+0(\.0+)?$/.test(v))) errs.push(sh[0] + ': away amounts read ' + JSON.stringify(shown));
+      else console.log('away amounts shown: ' + shown.join(' '));
+    }
     await p.screenshot({ path: path.join(root, 'shots', sh[0] + '.png') });
     await ctx.close();
   }

@@ -99,6 +99,8 @@
   "path-distance",
   "tree-growth",
   "village",
+  "expand",
+  "contract",
   "radio-tower"
  ],
  "lorc": [
@@ -170,6 +172,7 @@
   "broadsword",
   "on-target",
   "flying-flag",
+  "magnifying-glass",
   "stone-tower",
   "ringed-planet"
  ],

@@ -18,7 +18,7 @@
   let S = null, D = null, booted = false, bootSaved = 0;
   let view = { tab: 'realm', qty: 1, older: false, oldGround: false };
   let lineup = [], openLog = {}, live = [], sheetLive = [], lastSig = '', lastBadges = '', lastPips = '', lastEmblem = 0, launch = null, toastTimer = 0, saveTimer = 0, switched = true;
-  let histOpen = false, skipPop = 0;
+  let histOpen = false, skipPop = 0, city = false, feedSig = '', drawQueued = false;
   const cloud = { ref: null, state: 'none', at: 0, dirty: false, busy: false, timer: 0 };
   const VERSION = +window.APP_VERSION || 0, NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
   const REPO = 'jpvanacor/long-ascent', APK_URL = 'https://github.com/' + REPO + '/releases/latest/download/long-ascent.apk';
@@ -144,25 +144,28 @@
   }
 
   /* ---------- sheets ---------- */
-  /* An open sheet is one step in the browser history, so the phone's back button closes it instead of leaving the game. */
+  /* While a sheet or the city view is open there is one step in the browser history, so the phone's back button
+     closes what is on top instead of leaving the game. */
+  function arm() { if (!histOpen) { try { history.pushState({ layer: 1 }, ''); histOpen = true; } catch (e) { /* no history here */ } } }
+  function disarm() { if (histOpen) { histOpen = false; skipPop++; try { history.back(); } catch (e) { skipPop--; } } }
+  function layered() { return !$('modal').hidden || city; }
   function openSheet(build, silent) {
     const sh = $('sheet'); sh.textContent = ''; sheetLive = []; build(sh); $('modal').hidden = false; sh.scrollTop = 0; sheetLive.forEach(function (f) { f(); });
     if (!silent) Snd.play('open');
-    if (!histOpen) { try { history.pushState({ sheet: 1 }, ''); histOpen = true; } catch (e) { /* no history here */ } }
+    arm();
   }
   function closeSheet(fromBack) {
     $('modal').hidden = true; $('sheet').textContent = ''; sheetLive = [];
-    if (fromBack === true) { histOpen = false; return; }
-    if (histOpen) { histOpen = false; skipPop++; try { history.back(); } catch (e) { skipPop--; } }
+    if (fromBack !== true && !city) disarm();
   }
   function onPop() {
-    if (skipPop > 0) {                     // our own step back; a sheet opened in the meantime needs its own step
-      skipPop--;
-      if (!$('modal').hidden && !histOpen) { try { history.pushState({ sheet: 1 }, ''); histOpen = true; } catch (e) { /* ignore */ } }
-      return;
-    }
-    if (!$('modal').hidden) closeSheet(true); else histOpen = false;
+    if (skipPop > 0) { skipPop--; if (layered()) arm(); return; }      // our own step back; whatever opened in the meantime needs its own step
+    histOpen = false;                                                   // the back button used the step up
+    if (!$('modal').hidden) closeSheet(true); else if (city) closeCity(true);
+    if (layered()) arm();
   }
+  function inSheet(build) { const keep = live; live = sheetLive; try { return build(); } finally { live = keep; } }   // a card whose numbers follow the sheet, not the panel
+  function goTab(tab) { if (!$('modal').hidden) closeSheet(); if (city) closeCity(); go(tab); }
   function sheetHead(tileEl, title, under) {
     const mid = el('div', 'mid'); mid.appendChild(el('h3', null, title));
     if (under) mid.appendChild(typeof under === 'string' ? el('div', 'sm soft', under) : under);
@@ -247,6 +250,7 @@
       add(sh, add(el('div', 'acts'), btn('Launch the Ark', function () {
         closeSheet(); const old = JSON.parse(JSON.stringify(S)); const gain = C.depart(S, now());
         if (!gain) return;
+        if (city) closeCity();
         Snd.play('depart'); launch = { state: old, t0: now(), gain: gain }; lineup = []; openLog = {}; view.tab = 'legacy'; switched = true; cloud.dirty = true; saveSoon(); step(true);
       }, 'big ready', 'p.5'), btn('Stay for now', function () { closeSheet(); }, 'alt')));
     });
@@ -270,6 +274,158 @@
   }
   function go(tab) { if (view.tab === tab) return; view.tab = tab; switched = true; saveView(); $('panel').scrollTop = 0; render(); }
 
+  /* ---------- the city view ---------- */
+  /* The picture at the top, opened to the whole screen. It can be dragged, brought closer with two fingers or a
+     double tap, and the things in it can be touched. The game goes on underneath. */
+  function redraw() {
+    if (drawQueued) return; drawQueued = true;
+    requestAnimationFrame(function () { drawQueued = false; if (!document.hidden && !launch) Scene.draw(S, now()); });
+  }
+  function place(id) {                       // where a part of the picture is on screen, for effects; the whole picture if it is not there
+    const at = Scene.where(id), r = $('scene').getBoundingClientRect();
+    return at && at.x > 0 && at.x < r.width && at.y > 0 && at.y < r.height ? { clientX: r.left + at.x, clientY: r.top + at.y } : $('scene');
+  }
+  function rgb(hex) { return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]; }
+  function tellScene(b) {                    // what the picture needs to know about the game, four times a second
+    if (launch) { Scene.facts = {}; return; }                                  // the world being left behind is shown as it was
+    const open = C.ageTabOpen(S) && !C.projectDone(S), cost = open ? C.stageCost(S, D) : null, busy = C.has(S, 'heroes') ? C.busy(S) : {}, hc = {};
+    for (const id in HC) hc[id] = rgb(HC[id]);
+    Scene.facts = {
+      projectOpen: open, stageReady: !!(cost && C.canPay(S, cost)), trial: C.trialOpen(S) && !S.trialWon[S.age], edicts: C.has(S, 'edicts'),
+      plots: C.BUILDINGS.filter(function (x) { return x.age === S.age && C.buildingVisible(S, x) && !C.count(S, x.id); }).map(function (x) { return x.id; }),
+      home: C.has(S, 'heroes') ? Object.keys(S.heroes).filter(function (id) { return !busy[id]; }) : [], hc: hc, kn: !!b.tree, heroMark: !!b.heroes
+    };
+  }
+  function openCity() {
+    if (city || launch) return;
+    city = true; document.documentElement.classList.add('city'); $('cityui').hidden = false;
+    Scene.city(true, parseFloat(getComputedStyle($('tabs')).paddingBottom) || 0);
+    arm(); Snd.play('open'); feedSig = ''; drawFeed(); redraw();
+    if (!S.seen.city) {                      // said once: how to move about
+      S.seen.city = 1;
+      const h = el('div', null, 'Drag to look around. Pinch or double tap to come closer. Tap a building to act.'); h.id = 'cityhint'; $('cityui').appendChild(h);
+      setTimeout(function () { h.classList.add('off'); }, 6000); setTimeout(function () { if (h.parentNode) h.parentNode.removeChild(h); }, 7000);
+    }
+  }
+  function closeCity(fromBack) {
+    if (!city) return;
+    city = false; document.documentElement.classList.remove('city'); $('cityui').hidden = true; Scene.city(false);
+    if (fromBack !== true && $('modal').hidden) disarm();
+    redraw();
+  }
+  function feedLines() {                     // what is going on, in a few words: icon, text, the place it belongs to, whether it calls for action
+    const L = [], t = now(), F = Scene.facts || {};
+    if (C.canAdvance(S)) L.push(['age.' + (S.age + 1), ageTitle(S.age + 1) + ' awaits', 'work:' + S.age, 1]);
+    else if (C.canDepart(S)) L.push(['p.5', 'The Ark is ready', 'work:5', 1]);
+    else if (C.ageTabOpen(S) && !C.projectDone(S) && C.stageCost(S, D)) {
+      const pr = C.PROJECTS[S.age], c = C.stageCost(S, D); let f = 1; for (const r in c) f = Math.min(f, S.res[r] / c[r]);
+      L.push(['p.' + S.age, short(pr.name) + ', ' + pr.stages[S.project].toLowerCase() + ': ' + (f >= 1 ? 'ready to build' : Math.floor(100 * Math.max(0, f)) + '%'), 'work:' + S.age, f >= 1 ? 1 : 0]);
+    }
+    if (F.trial && !S.parties.some(function (p) { return p.m === 'trial' + S.age; })) L.push(['m.trial' + S.age, short(C.TRIALS[S.age].name) + ' bars the way', 'trial', 0]);
+    S.parties.forEach(function (p) { L.push(['m.' + p.m, C.MISSION[p.m].name + ': ' + (t >= p.t1 ? 'returning' : fmtTime((p.t1 - t) / 1000)), 'keep', 0]); });
+    if (S.reports.length) L.push(['tab.heroes', S.reports.length === 1 ? 'One party has returned' : S.reports.length + ' parties have returned', 'keep', 1]);
+    if (F.edicts) { const on = S.edict && S.edict.until > t; L.push(['ui.edict', on ? C.EDICT[S.edict.id].name + ' ' + fmtTime((S.edict.until - t) / 1000) : 'Proclaim an edict', 'edict', on ? 0 : 1]); }
+    if (F.kn) L.push(['tab.council', 'Research is waiting', 'tree', 1]);
+    (F.plots || []).slice(0, 2).forEach(function (id) { const b = C.B[id]; L.push(['b.' + id, b.name + ': not built yet', 'b:' + id, C.canPay(S, C.buildCost(b, 0, 1)) ? 1 : 0]); });
+    L.sort(function (a, b) { return b[3] - a[3]; });       // what can be done now comes first
+    return L.slice(0, 6);
+  }
+  function drawFeed() {
+    const box = $('feed'), L = feedLines(), sig = L.map(function (l) { return l[0] + l[2] + l[3]; }).join('|');
+    if (sig !== feedSig) {
+      feedSig = sig; box.textContent = '';
+      L.forEach(function (l) {
+        const t = tag(l[0], l[1], function () { if (l[2] === 'tree') { Snd.play('tap'); goTab('tree'); } else { Scene.look(l[2]); redraw(); citySite(l[2]); } });
+        if (l[3]) t.classList.add('go');
+        t.dataset.feed = l[2]; box.appendChild(t);
+      });
+    } else L.forEach(function (l, i) { setText(box.children[i].lbl, l[1]); });
+  }
+  function buildingSheet(b) {
+    openSheet(function (sh) {
+      sh.appendChild(el('p', 'sm soft', b.desc));
+      sh.appendChild(sec(C.count(S, b.id) ? 'Build more' : 'Not built yet', seg([[1, 'x1'], [10, 'x10'], ['max', 'Max']], view.qty, function (v) { view.qty = v; saveView(); render(); buildingSheet(b); })));
+      sh.appendChild(inSheet(function () { return buildingCard(b); }));
+      sh.appendChild(closeRow());
+    }, !$('modal').hidden);
+  }
+  function projectSheet() {
+    openSheet(function (sh) { sh.appendChild(inSheet(projectCard)); sh.appendChild(closeRow()); });
+  }
+  function keepSheet() {
+    if (!C.has(S, 'heroes')) { info('The keep', 'tab.realm', 'civ', ['It has watched the ford since before the first field was cut.', 'Heroes will answer its call once the oath of watch is researched.']); return; }
+    openSheet(function (sh) {
+      const free = Object.keys(S.heroes).length - Object.keys(C.busy(S)).length;
+      sh.appendChild(sheetHead(tile('tab.heroes', 'arm', 'lg'), 'The heroes', free ? free + (free === 1 ? ' hero is' : ' heroes are') + ' at home.' : 'Everyone is away.'));
+      inSheet(function () { S.parties.forEach(function (pt) { sh.appendChild(partyCard(pt)); }); });
+      if (S.reports.length) sh.appendChild(el('div', 'hint', S.reports.length === 1 ? 'A party has returned and waits to report.' : S.reports.length + ' parties have returned and wait to report.'));
+      sh.appendChild(add(el('div', 'acts'), btn('To the heroes', function () { Snd.play('tap'); goTab('heroes'); }, 'big', 'tab.heroes'), btn('Close', function () { closeSheet(); }, 'alt big')));
+    });
+  }
+  function townSheet() {
+    let total = 0; for (const k in S.b) total += S.b[k];
+    const houses = Math.min(47, 3 + Math.floor(1.7 * Math.sqrt(total)));
+    info('The town', 'ui.village', 'civ', ['The street fills as the realm builds: every farm, yard and hall brings people to live here.',
+      add(el('div', 'stats'), stat('ui.village', houses + ' houses'), stat('ui.store', total + ' buildings in all')),
+      'It is busiest by day. After dark the lamps are lit and most are indoors.']);
+  }
+  function citySite(id) {                    // something in the picture was touched
+    if (!id) return;
+    if (id.slice(0, 2) === 'b:') { buildingSheet(C.B[id.slice(2)]); return; }
+    if (id.slice(0, 5) === 'work:') {
+      const a = +id.slice(5);
+      if (a === S.age && C.ageTabOpen(S)) projectSheet(); else info(C.PROJECTS[a].name, 'p.' + a, 'cap', [C.PROJECTS[a].done, 'A great work of the ' + C.AGES[a].name + '. It stands for as long as this world lasts.']);
+      return;
+    }
+    if (id === 'keep' || id === 'heroes') keepSheet();
+    else if (id === 'trial') infoMission(C.MISSION['trial' + S.age]);
+    else if (id === 'edict') edictSheet();
+    else if (id === 'town') townSheet();
+  }
+  function cityTouch() {                     // one finger moves the view, two change how close it is, a tap picks
+    const cv = $('scene'), pts = new Map();
+    let moved = 0, t0 = 0, lastTap = 0, lastX = 0, lastY = 0, pinch = null;
+    const pos = function (e) { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    cv.addEventListener('pointerdown', function (e) {
+      if (!city) return;
+      try { cv.setPointerCapture(e.pointerId); } catch (x) { /* not every browser */ }
+      pts.set(e.pointerId, pos(e)); pinch = null;
+      if (pts.size === 1) { moved = 0; t0 = now(); }
+    });
+    cv.addEventListener('pointermove', function (e) {
+      if (!city || !pts.has(e.pointerId)) return;
+      const was = pts.get(e.pointerId), p = pos(e);
+      pts.set(e.pointerId, p);
+      if (pts.size === 1) { Scene.pan(p.x - was.x, p.y - was.y); moved += Math.abs(p.x - was.x) + Math.abs(p.y - was.y); }
+      else if (pts.size === 2) {
+        const a = Array.from(pts.values()), d = Math.max(1, Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y)), mx = (a[0].x + a[1].x) / 2, my = (a[0].y + a[1].y) / 2;
+        if (pinch) { Scene.zoomBy(d / pinch.d, mx, my); Scene.pan(mx - pinch.x, my - pinch.y); }
+        pinch = { d: d, x: mx, y: my }; moved += 99;
+      }
+      redraw();
+    });
+    const up = function (e) { pts.delete(e.pointerId); pinch = null; };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    cv.addEventListener('wheel', function (e) { if (!city) return; e.preventDefault(); const p = pos(e); Scene.zoomBy(e.deltaY < 0 ? 1.15 : 1 / 1.15, p.x, p.y); redraw(); }, { passive: false });
+    /* Taps are read from the click, which arrives after the finger has lifted: a sheet opened any earlier would
+       receive that same click on its backdrop and close again. */
+    cv.addEventListener('click', function (e) {
+      if (!city) { openCity(); return; }
+      if (moved > 12 || now() - t0 > 700) return;
+      const p = pos(e), id = Scene.pick(p.x, p.y);
+      if (id) { lastTap = 0; citySite(id); return; }
+      if (now() - lastTap < 340 && Math.hypot(p.x - lastX, p.y - lastY) < 44) { lastTap = 0; const c = Scene.camera(); Scene.zoomTo(c.z > c.home * 1.3 ? c.home : c.home * 1.9, p.x, p.y); redraw(); }
+      else { lastTap = now(); lastX = p.x; lastY = p.y; }
+    });
+    $('expand').appendChild(ic('ui.expand')); $('expand').addEventListener('click', openCity);
+    $('cityclose').appendChild(ic('ui.shrink')); $('cityclose').addEventListener('click', function () { Snd.play('tap'); closeCity(); });
+    $('cityzoom').appendChild(ic('ui.zoom'));
+    $('cityzoom').addEventListener('click', function () {      // three steps: the usual view, close up, the whole city
+      const c = Scene.camera(), r = cv.getBoundingClientRect(), next = c.z > c.home * 1.3 ? c.min : c.z < c.home * 0.8 ? c.home : c.home * 1.9;
+      Snd.play('tap'); Scene.zoomTo(next, r.width / 2, r.height * 0.7); redraw();
+    });
+  }
+
   /* ---------- realm ---------- */
   function infoStore() {
     info('Storehouses', 'ui.store', 'log', ['While the game is closed, your buildings keep working until the storehouses are full.',
@@ -284,7 +440,7 @@
         add(card, tile('e.' + e.id, fxKind(e.fx)), add(el('div', 'mid'), el('div', 'name', e.name), el('div', 'sm soft', e.desc)),
           btn(on ? 'Renew' : 'Proclaim', function () {
             if (!C.setEdict(S, e.id, now())) return;
-            closeSheet(); Snd.play('edict'); toast(e.name + ' is proclaimed.'); did();
+            closeSheet(); Snd.play('edict'); toast(e.name + ' is proclaimed.'); Scene.emit('edict'); did();
             const t = document.querySelector('[data-act="edict"]'); if (t) sparkle(t, fxKind(e.fx));
           }, on ? 'alt' : ''));
         sh.appendChild(card);
@@ -310,7 +466,7 @@
       Snd.play('coin', { rate: 0.94 + Math.random() * 0.14 });
       FX.float(from, '+' + fmtC(g), { color: RC.gold, icon: ic('res.gold'), dy: -30 });
       FX.fly(from, $('col-gold'), { n: 1, size: 7 }, function () { FX.bump($('col-gold')); });
-      did();
+      Scene.emit('work'); did();
     }, 'ready', 'ui.work');
     b.dataset.act = 'work';
     add(card, b, el('div', 'sm soft', S.b.farm ? 'Keep working until the farmsteads carry the settlement.' : 'No coin yet. Work by hand until the first farmstead stands.'));
@@ -319,7 +475,7 @@
   function projectCard() {
     const pr = C.PROJECTS[S.age], card = el('div', 'card feature'), mid = el('div', 'mid');
     if (C.canAdvance(S)) {
-      const b = btn('Enter the ' + C.AGES[S.age + 1].name, enterNextAge, 'big ready', 'ui.climb'); b.dataset.act = 'advance';
+      const b = btn('Enter the ' + C.AGES[S.age + 1].name, function () { if (!$('modal').hidden) closeSheet(); enterNextAge(); }, 'big ready', 'ui.climb'); b.dataset.act = 'advance';
       add(card, add(el('div', 'head'), tile('age.' + (S.age + 1), 'cap', 'lg'), add(mid, el('div', 'name', pr.done), el('div', 'sm soft', C.TRIALS[S.age].name + ' is defeated.'))), add(el('div', 'acts'), b));
     } else if (C.canDepart(S)) {
       const b = btn('Launch the Ark', askDepart, 'big ready', 'p.5'); b.dataset.act = 'depart';
@@ -327,12 +483,14 @@
     } else if (C.projectDone(S)) {
       const tr = C.TRIALS[S.age];
       add(card, add(el('div', 'head'), tile('m.trial' + S.age, 'boss', 'lg', function () { infoMission(C.MISSION['trial' + S.age]); }), add(mid, el('div', 'name', tr.name), el('div', 'sm soft', pr.done + ' One enemy still bars the way.'))));
-      if (view.tab !== 'heroes') add(card, add(el('div', 'acts'), btn('To the heroes', function () { Snd.play('tap'); go('heroes'); }, 'alt big', 'tab.heroes')));
+      if (view.tab !== 'heroes' || city) add(card, add(el('div', 'acts'), btn('To the heroes', function () { Snd.play('tap'); goTab('heroes'); }, 'alt big', 'tab.heroes')));
     } else {
       const cv = costView(false), bar = el('div', 'bar'), fill = el('i'), eta = el('span', 'sm soft num'); bar.appendChild(fill);
       const b = btn('Build', function (bt) {
         if (!C.buildStage(S, now())) { Snd.play('error'); FX.shake(bt); return; }
-        Snd.play('stage'); FX.burst($('scene'), { n: 44, color: ['#ffe9a8', '#ffffff', '#f4cb5e'], speed: 280, life: 1.1, size: 4 }); FX.ring($('scene'), '#fff3c4', 130, 6);
+        const at = place('work:' + S.age);
+        Snd.play('stage'); FX.burst(at, { n: 44, color: ['#ffe9a8', '#ffffff', '#f4cb5e'], speed: 280, life: 1.1, size: 4 }); FX.ring(at, '#fff3c4', 130, 6);
+        Scene.emit('stage', S.age); if (!$('modal').hidden) closeSheet();        // in the city view the sheet steps aside for the celebration
         did();
       }, 'big', 'ui.up');
       b.dataset.act = 'build';
@@ -357,7 +515,7 @@
       const n = C.buy(S, b.id, view.qty);
       if (!n) { Snd.play('error'); FX.shake(buy); return; }
       Snd.play('buy'); FX.pop(t); FX.burst(t, { n: 10, color: [RC[b.res], '#fff'], speed: 130, life: 0.55 }); FX.float(t, '+' + n, { color: '#fff', dy: -34 });
-      did();
+      Scene.emit('buy', b.id); did();
     });
     add(card, t, add(el('div', 'mid'), el('div', 'name', b.name), add(el('div', 'stats'), outN), add(el('div', 'barrow'), bar, nx)), buy);
     live.push(function () {
@@ -420,7 +578,7 @@
       const cv = costView(false), eta = el('span', 'sm soft num');
       const b = btn('Research', function (bt) {
         if (!C.research(S, t.id, now())) { Snd.play('error'); FX.shake(bt); return; }
-        closeSheet(); Snd.play('research');
+        closeSheet(); Snd.play('research'); Scene.emit('research');
         if (t.fx.type === 'unlock' && t.fx.what === 'heroes') toast('The Warden has sworn the oath. Heroes are open.');
         did();
         const n = document.querySelector('[data-node="' + t.id + '"]'); if (n) { sparkle(n, kind); FX.pop(n); }
@@ -639,7 +797,7 @@
     b.type = 'button'; b.dataset.act = 'recruit:' + h.id; add(b, el('span', 'q', 'Recruit'), cv.el);
     b.addEventListener('click', function () {
       if (!C.recruit(S, h.id, now())) { Snd.play('error'); FX.shake(b); return; }
-      Snd.play('recruit'); toast(h.name + ' joins the realm.'); did();
+      Snd.play('recruit'); toast(h.name + ' joins the realm.'); Scene.emit('recruit'); did();
     });
     add(card, face(h.id, 'lg', function () { infoHero(h); }), add(el('div', 'mid'), el('div', 'name', h.name), el('div', 'sm soft', h.role), add(el('div', 'stats'), tag('ui.star', h.ability, function () { infoHero(h); }))), b);
     live.push(function () { cv.set({ gold: cost }); b.disabled = S.res.gold < cost; b.classList.toggle('ready', S.res.gold >= cost); });
@@ -830,6 +988,7 @@
     live = []; p.textContent = '';
     ({ realm: panelRealm, tree: panelTree, heroes: panelHeroes, age: panelAge, legacy: panelLegacy })[view.tab](p);
     head(); live.forEach(function (f) { f(); });
+    tellScene(badges()); if (city) drawFeed();
     p.scrollTop = switched ? 0 : keep; lastSig = signature();
     if (switched) {
       switched = false;
@@ -842,7 +1001,9 @@
     if (signature() !== lastSig) { render(); return; }
     head(); live.forEach(function (f) { f(); });
     if (!$('modal').hidden) sheetLive.forEach(function (f) { f(); });
-    if (JSON.stringify(badges()) !== lastBadges) drawTabs();
+    const b = badges();
+    if (JSON.stringify(b) !== lastBadges) drawTabs();
+    tellScene(b); if (city) drawFeed();
   }
   function did() { cloud.dirty = true; saveSoon(); announce(); refresh(); }
   function announce() {                      // say once when a new part of the game opens
@@ -883,7 +1044,7 @@
       }
       if (!launch) Scene.draw(S, t);
     }
-    setTimeout(function () { requestAnimationFrame(frame); }, Scene.still ? 1500 : 70);
+    setTimeout(function () { requestAnimationFrame(frame); }, Scene.still ? 1500 : city ? 24 : 70);
   }
   function start(hot) {
     let local = null, hotState = null;
@@ -903,6 +1064,7 @@
     $('menu').appendChild(ic('ui.menu'));
     $('menu').addEventListener('click', openMenu);
     $('modal').addEventListener('click', function (e) { if (e.target === $('modal')) closeSheet(); });
+    cityTouch();
     window.addEventListener('popstate', onPop);
     booted = true;
     if (!bootSaved) turnPage('Long Ascent', C.AGES[1].intro, 'ui.climb', 0, true);
@@ -913,7 +1075,7 @@
     window.addEventListener('pagehide', function () { saveLocal(); pushCloud(); });
     document.addEventListener('apppause', function () { saveLocal(); });                      // the Android app going to the background
     document.addEventListener('appresume', function () { step(false); });
-    window.addEventListener('resize', function () { if (view.tab === 'tree') render(); });
+    window.addEventListener('resize', function () { if (view.tab === 'tree') render(); if (city) redraw(); });
     requestAnimationFrame(frame);
     initCloud();
     if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(function () { return { save: C.serialize(S, now()), view: view }; });
@@ -923,7 +1085,7 @@
       }).catch(function () { /* the game works without it */ });
     }
     checkUpdate();
-    window.__la = { get state() { return S; }, set: function (st) { adopt(st); }, scene: Scene, go: go };
+    window.__la = { get state() { return S; }, set: function (st) { adopt(st); }, scene: Scene, go: go, city: openCity, leave: closeCity, touch: citySite };
   }
   const hot = window.claude && window.claude.hot;
   if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});

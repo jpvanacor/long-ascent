@@ -125,13 +125,23 @@
     flash: function (el) { again(el, 'flash'); },
     /* count a number up inside an element */
     count: function (el, to, ms, fmt, prefix) {
-      if (quiet) { el.textContent = (prefix || '') + fmt(to); return; }
-      const t0 = performance.now();
-      (function step(t) {
-        const f = Math.min(1, (t - t0) / (ms || 900)), e = 1 - Math.pow(1 - f, 3);
-        el.textContent = (prefix || '') + fmt(to * e);
-        if (f < 1 && el.isConnected) requestAnimationFrame(step);
-      })(t0);
+      const put = function (v) { el.textContent = (prefix || '') + fmt(v); };
+      if (quiet) { put(to); return; }
+      const t0 = performance.now(), dur = ms || 900;
+      let done = false, seen = false;
+      put(0);
+      /* The element is often not on the page yet when this is called, so its absence only stops the count once it
+         has been seen there. The timer is the safety net: frames do not run while the page is hidden. */
+      const step = function (t) {
+        if (done) return;
+        if (el.isConnected) seen = true; else if (seen) { done = true; return; }
+        const f = Math.min(1, Math.max(0, t - t0) / dur);
+        if (f >= 1) { done = true; put(to); return; }
+        put(to * (1 - Math.pow(1 - f, 3)));
+        requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+      setTimeout(function () { if (!done) { done = true; put(to); } }, dur + 600);
     }
   };
   window.FX = FX;

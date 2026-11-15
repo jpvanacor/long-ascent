@@ -1,12 +1,18 @@
 /* Long Ascent: the illustrated settlement. A small procedural painter on a 2D canvas.
    Everything is drawn in a 360 x 200 space. The sky follows the device clock, the land keeps its history:
-   the keep, the cathedral, the harbor and the railway stay as the ages turn. */
+   the keep, the cathedral, the harbor and the railway stay as the ages turn.
+   The same picture is shown two ways: as the strip at the top of the game, and as the city view, where a
+   camera can be moved and brought closer. The people and the work in it are drawn by city.js. */
 (function (root) {
   'use strict';
   const W = 360, H = 200, TAU = Math.PI * 2;
   let cv = null, ctx = null, cssW = 0, cssH = 0, dpr = 1;
   let layout = null, layoutSeed = -1, E = null;
-  const Scene = { hour: null, still: false };
+  const Scene = { hour: null, still: false, facts: {} };
+  const GROUND = 200, SKYTOP = 22;                         // the bottom of the land; how far up the camera may look when close
+  const cam = { on: false, z: 0, x: 0, y: 0, pad: 0 };      // city view: screen pixels per unit, and the world point in the top left corner
+  let T = { k: 1, ox: 0, oy: 0 };                           // the transform of the last frame, in css pixels: screen = world * k + o
+  let sites = [], events = [];
 
   /* ---------- colour ---------- */
   const mix = function (a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; };
@@ -87,6 +93,9 @@
     for (let i = 0; i < 9; i++) tree(252 + r() * 100, 108 + r() * 34, 0.55 + r() * 0.25, r() < 0.5 ? 1 : 0);     // hill slopes
     for (let i = 0; i < 6; i++) tree(2 + r() * 22, 153 + r() * 5, 0.8 + r() * 0.3, 0);                           // by the shore
     for (let i = 0; i < 7; i++) tree(150 + r() * 80, 158 + r() * 34, 0.9 + r() * 0.4, 0);                        // meadow
+    /* drawn after everything above so that worlds already under way keep their houses and trees where they were */
+    L.high = []; for (let i = 0; i < 420; i++) L.high.push({ x: r() * W, y: 104 - r() * 560, s: 0.3 + r() * 0.5, p: r() * TAU, f: 0.5 + r() });     // seen only in the city view
+    for (let i = 0; i < 4; i++) L.clouds.push({ x: r() * (W + 140), y: -70 + r() * 90, s: 0.8 + r() * 0.9, v: 0.25 + r() * 0.4 });
     return L;
   }
 
@@ -95,7 +104,8 @@
     const g = ctx.createLinearGradient(0, -110, 0, 124);
     g.addColorStop(0, col(E.top)); g.addColorStop(0.62, col(E.mid)); g.addColorStop(1, col(E.bot));
     ctx.fillStyle = g; ctx.fillRect(0, -130, W, 256);
-    if (E.star > 0.02) for (const s of layout.stars) {
+    if (E.star > 0.02) for (const list of E.city ? [layout.stars, layout.high] : [layout.stars]) for (const s of list) {
+      if (s.y < E.y0 - 2 || s.x < E.x0 - 2 || s.x > E.x1 + 2) continue;
       const tw = Scene.still ? 0.8 : 0.55 + 0.45 * Math.sin(E.t * s.f + s.p);
       Ci(s.x, s.y, s.s, [236, 240, 255], E.star * tw * 0.9);
     }
@@ -221,17 +231,17 @@
       }
     }
   }
-  function sailShip(x, y, s, u) {
+  function sailShip(x, y, s, u, sail) {
     const b = Scene.still ? 0 : Math.sin(E.t * 0.8 + u * 9) * 0.5; y += b;
     P([x - 7 * s, y - 2.2 * s, x + 7.5 * s, y - 2.2 * s, x + 5.5 * s, y, x - 5.5 * s, y], tone([92, 62, 44], 0.14));
     R(x - 6.4 * s, y - 3 * s, 2.6 * s, 0.9 * s, tone([92, 62, 44], 0.14));
-    const sc = tone([238, 228, 204], 0.12);
+    const sc = tone(sail || [238, 228, 204], 0.12);
     for (const m of [[-2.6, 9], [2.4, 11]]) {
       Ln(x + m[0] * s, y - 2.2 * s, x + m[0] * s, y - (m[1] + 3) * s, tone(C.timber, 0.14), 0.45 * s);
       P([x + (m[0] - 2.5) * s, y - 3.4 * s, x + (m[0] + 2.7) * s, y - 3.4 * s, x + (m[0] + 2.1) * s, y - (m[1] * 0.62 + 2) * s, x + (m[0] - 1.9) * s, y - (m[1] * 0.62 + 2) * s], sc);
       P([x + (m[0] - 1.7) * s, y - (m[1] * 0.62 + 2.6) * s, x + (m[0] + 1.9) * s, y - (m[1] * 0.62 + 2.6) * s, x + (m[0] + 1.4) * s, y - (m[1] + 1.6) * s, x + (m[0] - 1.3) * s, y - (m[1] + 1.6) * s], sc);
     }
-    P([x + 2.4 * s, y - 14 * s, x + 5 * s, y - 13.3 * s, x + 2.4 * s, y - 12.6 * s], tone([170, 44, 38], 0.12));
+    P([x + 2.4 * s, y - 14 * s, x + 5 * s, y - 13.3 * s, x + 2.4 * s, y - 12.6 * s], tone(sail ? [20, 20, 24] : [170, 44, 38], 0.12));
   }
   function steamer(x, y, s, u) {
     const b = Scene.still ? 0 : Math.sin(E.t * 0.7 + u * 7) * 0.4; y += b;
@@ -283,10 +293,14 @@
   function foreland() {
     const gc = [null, C.fore, [112, 142, 78], [104, 122, 82], [100, 128, 88], [94, 130, 100]][E.age];
     const g = ctx.createLinearGradient(0, 150, 0, 200); g.addColorStop(0, col(tone(gc, 0.07))); g.addColorStop(1, col(tone(dk(gc, 0.78), 0)));
-    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 151.6); ctx.quadraticCurveTo(50, 149.6, 104, 153.2); ctx.lineTo(150, 152.4); ctx.lineTo(360, 152); ctx.lineTo(360, 201); ctx.lineTo(0, 201); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 151.6); ctx.quadraticCurveTo(50, 149.6, 104, 153.2); ctx.lineTo(150, 152.4); ctx.lineTo(360, 152); ctx.lineTo(360, 290); ctx.lineTo(0, 290); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = col(tone(C.sand, 0.08)); ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(0, 151.8); ctx.quadraticCurveTo(50, 149.8, 104, 153.4); ctx.stroke();
+    const paving = tone([null, [176, 154, 116], [186, 170, 136], [150, 146, 140], [98, 100, 106], [198, 206, 214]][E.age], 0.07);   // the street along the town front
+    ctx.fillStyle = col(paving); ctx.beginPath(); ctx.moveTo(110, 151.5); ctx.lineTo(256, 151); ctx.quadraticCurveTo(259, 152.7, 256, 154.4); ctx.lineTo(110, 154.7); ctx.quadraticCurveTo(106.5, 153.1, 110, 151.5); ctx.closePath(); ctx.fill();
+    if (E.age === 3 && E.z > 2) for (let x = 112; x < 256; x += 3) Ln(x, 151.6, x - 0.6, 154.5, dk(paving, 0.9), 0.12, 0.6);       // setts
+    if (E.age >= 4) { ctx.strokeStyle = col(E.age === 5 ? CYAN : [240, 236, 200], E.age === 5 ? 0.5 : 0.55); ctx.lineWidth = 0.25; ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.moveTo(112, 153.05); ctx.lineTo(255, 152.7); ctx.stroke(); ctx.setLineDash([]); }
     const road = tone(E.age >= 4 ? [96, 98, 104] : [184, 164, 124], 0.05);                         // the road out of town
-    ctx.strokeStyle = col(road); ctx.lineWidth = E.age >= 4 ? 3.2 : 2.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(176, 152.5); ctx.bezierCurveTo(178, 166, 206, 172, 198, 201); ctx.stroke(); ctx.lineCap = 'butt';
+    ctx.strokeStyle = col(road); ctx.lineWidth = E.age >= 4 ? 3.2 : 2.4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(176, 152.5); ctx.bezierCurveTo(178, 166, 206, 172, 198, 201); ctx.lineTo(197, 290); ctx.stroke(); ctx.lineCap = 'butt';
     if (E.age >= 4) { ctx.strokeStyle = col([240, 236, 200], 0.6); ctx.lineWidth = 0.4; ctx.setLineDash([2.5, 2.5]); ctx.beginPath(); ctx.moveTo(176, 152.5); ctx.bezierCurveTo(178, 166, 206, 172, 198, 201); ctx.stroke(); ctx.setLineDash([]); }
   }
   function tree(t, dep) {
@@ -491,13 +505,65 @@
     Ln(x - 13, y, x - 13, y - 15, tone(C.iron, 0.03), 0.9); Ln(x - 13, y - 15, x - 2, y - 13, tone(C.iron, 0.03), 0.7); Ln(x - 2, y - 13, x - 2, y - 10, tone(C.iron, 0.03), 0.4);
   }
 
-  /* ---------- one frame ---------- */
+  function onRoad(t) {                                    // the road out of town is kept clear, now that carts use it
+    if (t.y < 153 || t.x < 160 || t.x > 216) return false;
+    for (let u = 0; u <= 1.001; u += 0.04) {
+      const v = 1 - u, x = v * v * v * 176 + 3 * v * v * u * 178 + 3 * v * u * u * 206 + u * u * u * 198, y = v * v * v * 152.5 + 3 * v * v * u * 166 + 3 * v * u * u * 172 + u * u * u * 201;
+      if (Math.abs(t.x - x) < 7.5 && Math.abs(t.y - 1 - y) < 5) return true;
+    }
+    return false;
+  }
+
+  /* ---------- the camera of the city view ---------- */
   function resize() {
     const r = cv.getBoundingClientRect(), d = Math.min(3, root.devicePixelRatio || 1);
     if (r.width === cssW && r.height === cssH && d === dpr) return;
     cssW = r.width; cssH = r.height; dpr = d; cv.width = Math.max(1, Math.round(cssW * dpr)); cv.height = Math.max(1, Math.round(cssH * dpr));
   }
+  function zoomRange() { const fit = cssW / W, lo = Math.max(fit, 0.26 * cssH / 110); return [lo, Math.max(lo * 3, fit * 7)]; }   // on a tall screen the widest view stops short of the whole width, so the land keeps a quarter of the height
+  function homeZoom() { const r = zoomRange(); return clamp(0.62 * (cssH - cam.pad) / 108, r[0] * 1.5, r[1]); }     // the land fills a little over half the screen
+  function clampCam() {
+    const r = zoomRange();
+    if (!cam.z) { cam.z = homeZoom(); cam.x = 180 - cssW / cam.z / 2; cam.y = 1e9; }                                // first look: the town centre, standing on the ground
+    cam.z = clamp(cam.z, r[0], r[1]);
+    const vw = cssW / cam.z, vh = cssH / cam.z, low = GROUND + cam.pad / cam.z - vh;                                 // the ground rests on the bottom edge
+    cam.x = clamp(cam.x, 0, Math.max(0, W - vw));
+    cam.y = clamp(cam.y, Math.min(low, SKYTOP), low);
+  }
   Scene.attach = function (canvas) { cv = canvas; ctx = cv.getContext('2d'); cssW = cssH = 0; };
+  Scene.city = function (on, pad) { cam.on = !!on; cam.pad = pad || 0; };
+  Scene.home = function () { cam.z = 0; };
+  Scene.pan = function (dx, dy) { if (!cam.on || !cam.z) return; cam.x -= dx / cam.z; cam.y -= dy / cam.z; clampCam(); };
+  Scene.zoomBy = function (f, px, py) {                      // keeps the point under the fingers where it is
+    if (!cam.on || !cam.z) return;
+    const wx = cam.x + px / cam.z, wy = cam.y + py / cam.z, r = zoomRange();
+    cam.z = clamp(cam.z * f, r[0], r[1]); cam.x = wx - px / cam.z; cam.y = wy - py / cam.z; clampCam();
+  };
+  Scene.zoomTo = function (z, px, py) { if (cam.z) Scene.zoomBy(z / cam.z, px, py); };
+  Scene.camera = function () { const r = cssW ? zoomRange() : [1, 7]; return { on: cam.on, z: cam.z, x: cam.x, y: cam.y, min: r[0], max: r[1], home: cssW ? homeZoom() : 0 }; };
+  Scene.look = function (id) {                               // bring a place to the middle of the view
+    const st = sites.filter(function (q) { return q.id === id; }).pop();
+    if (!st || !cam.on || !cam.z) return false;
+    cam.x = st.x + st.w / 2 - cssW / cam.z / 2; clampCam(); return true;
+  };
+  Scene.pick = function (px, py) {                           // what stands under a touch; a finger is wider than a pixel
+    const x = (px - T.ox) / T.k, y = (py - T.oy) / T.k;
+    for (const pad of [0, 10 / T.k]) for (let i = sites.length - 1; i >= 0; i--) {
+      const q = sites[i];
+      if (x >= q.x - pad && x <= q.x + q.w + pad && y >= q.y - pad && y <= q.y + q.h + pad) return q.id;
+    }
+    return null;
+  };
+  Scene.where = function (id) {                              // the middle of a place, in css pixels of the canvas
+    const st = sites.filter(function (q) { return q.id === id; }).pop();
+    return st ? { x: (st.x + st.w / 2) * T.k + T.ox, y: (st.y + st.h / 2) * T.k + T.oy } : null;
+  };
+  Scene.places = function () { return sites.map(function (q) { return q.id; }); };
+  Scene.emit = function (kind, id) { events.push({ k: kind, id: id, t: Date.now() }); if (events.length > 24) events.shift(); };
+  Scene.kit = { W: W, H: H, C: C, GLOW: GLOW, CYAN: CYAN, mix: mix, dk: dk, col: col, clamp: clamp, tone: tone, R: R, P: P, Ci: Ci, El: El, Dome: Dome, Ln: Ln, win: win, smoke: smoke, sailShip: sailShip,
+    site: function (id, x, y, w, h) { sites.push({ id: id, x: x, y: y, w: w, h: h }); } };
+
+  /* ---------- one frame ---------- */
   Scene.draw = function (S, tms, fx) {
     if (!cv) return;
     resize(); if (!cssW || !cssH) return;
@@ -506,16 +572,23 @@
     const now = new Date(tms), hour = Scene.hour !== null ? Scene.hour : now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
     const age = S.age, n = function (id) { return S.b[id] || 0; }, lv = function (id) { const c = n(id); return c >= 50 ? 3 : c >= 10 ? 2 : c >= 1 ? 1 : 0; };
     E = makeEnv(hour, age, tms / 1000 % 100000);
-    const sc = cssW / W, top = cssH - H * sc;            // keep the ground at the bottom edge, let the sky absorb any slack
-    ctx.setTransform(dpr * sc, 0, 0, dpr * sc, 0, dpr * top);
+    let k, ox, oy;
+    if (cam.on) { clampCam(); k = cam.z; ox = -cam.x * k; oy = -cam.y * k; }
+    else { k = cssW / W; ox = 0; oy = cssH - H * k; }           // the strip: keep the ground at the bottom edge, let the sky absorb any slack
+    T = { k: k, ox: ox, oy: oy };
+    E.z = k; E.city = cam.on; E.ms = tms; E.x0 = -ox / k; E.y0 = -oy / k; E.x1 = E.x0 + cssW / k; E.y1 = E.y0 + cssH / k;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = col(E.top); ctx.fillRect(0, 0, cv.width, cv.height);       // whatever lies above the painted sky
+    ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * ox, dpr * oy);
     const stage = function (a) { return age > a ? 99 : age === a ? S.project : 0; };
+    sites = [];
+    const City = root.City && root.City.begin(E, ctx, S, Scene.facts || {}, stage) ? root.City : null;
 
-    sky();
+    sky(); if (City) City.sky();
     ridge(101, 30, 0, [96, 110, 144], 0.62, 127); ridge(110, 16, 4, [84, 104, 116], 0.46, 127);
     P([0, 116.6, 40, 114, 96, 114.6, 132, 116.8, 180, 118, 360, 118.4, 360, 122, 0, 122], tone([78, 100, 82], 0.4));
-    reactor(stage(4)); ark(stage(5), fx && fx.lift);
+    reactor(stage(4)); ark(stage(5), fx && fx.lift); if (City) City.far();
     sea(); viaduct(stage(3), stage(3) >= 4);
-    harbor(stage(2), age);
+    harbor(stage(2), age); if (City) City.bay();
     midland(); quays(stage(2));
 
     const items = [], put = function (y, f) { items.push({ y: y, f: f }); };
@@ -525,8 +598,8 @@
     if (n('inst')) put(118, function () { institute(lv('inst')); });
     if (n('array')) { put(99, function () { dish(338, 99.5, 6.5, 0.22); }); put(102, function () { dish(350, 103.5, 5, 0.2); }); if (lv('array') >= 2) put(101, function () { dish(327, 99, 4.6, 0.22); }); }
     const keepTrees = [1, 1, 0.85, 0.5, 0.42, 0.5][age] - Math.min(0.25, n('lumber') * 0.004);
-    for (const t of layout.trees) if (t.u < keepTrees) (function (t) { put(t.y, function () { tree(t, t.y < 150 ? 0.2 : 0.04); }); })(t);
-    let total = 0; for (const k in S.b) total += S.b[k];
+    for (const t of layout.trees) if (t.u < keepTrees && !onRoad(t)) (function (t) { put(t.y, function () { tree(t, t.y < 150 ? 0.2 : 0.04); }); })(t);
+    let total = 0; for (const b in S.b) total += S.b[b];
     const count = Math.min(layout.houses.length, 3 + Math.floor(1.7 * Math.sqrt(total)));
     for (let i = 0; i < count; i++) (function (h) {
       const kind = Math.max(1, age - (h.u < 0.3 ? 1 : 0));
@@ -549,9 +622,12 @@
     if (n('steel')) put(171, function () { steelworks(250, 171, lv('steel')); });
     if (n('refin')) put(191, function () { refinery(304, 191, lv('refin')); });
     if (n('fab')) put(193, function () { fabricator(224, 193, lv('fab')); });
+    if (City) City.town(put, { count: count, total: total, events: events, lift: fx && fx.lift });
     items.sort(function (a, b) { return a.y - b.y; });
     for (const it of items) it.f();
-    if (E.night > 0.5) { ctx.fillStyle = col([10, 14, 40], 0.05 * E.night); ctx.fillRect(0, -130, W, 340); }
+    if (E.night > 0.5) { ctx.fillStyle = col([10, 14, 40], 0.05 * E.night); ctx.fillRect(E.x0 - 1, E.y0 - 1, E.x1 - E.x0 + 2, E.y1 - E.y0 + 2); }
+    if (City) City.over(events);
+    for (let i = events.length - 1; i >= 0; i--) if (tms - events[i].t > 9000) events.splice(i, 1);
   };
   root.Scene = Scene;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

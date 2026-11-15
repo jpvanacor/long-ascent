@@ -25,6 +25,11 @@
       <div class="res kn hid" id="col-kn"><span id="ico-kn"></span><div><b class="num" id="amt-kn">0</b><i class="num" id="rate-kn"></i></div></div>
       <button class="round" id="menu" type="button" aria-label="Menu"></button>
     </div>
+    <button class="round" id="expand" type="button" aria-label="Open the city"></button>
+    <div id="cityui" hidden>
+      <div id="feed"></div>
+      <div id="citybtns"><button class="round" id="cityzoom" type="button" aria-label="Closer or further"></button><button class="round" id="cityclose" type="button" aria-label="Close the city"></button></div>
+    </div>
     <div id="banner">
       <div class="emblem" id="emblem"></div>
       <div><h1 id="title">Long Ascent</h1><div id="sub"></div></div>
@@ -40,10 +45,11 @@
   <div id="floaters"></div>
   <div id="turn"></div>
 </div>
-<script>var APP_VERSION=3;</script>
+<script>var APP_VERSION=4;</script>
 <script src="js/icons.js"></script>
 <script src="js/core.js"></script>
 <script src="js/scene.js"></script>
+<script src="js/city.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/ui.js"></script>
