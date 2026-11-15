@@ -6,7 +6,18 @@ OUT=device-test; mkdir -p "$OUT"
 APK=${1:-long-ascent.apk}; PKG=io.github.jpvanacor.longascent
 say() { echo "$@" | tee -a "$OUT/result.txt"; }
 shot() { adb exec-out screencap -p > "$OUT/$1.png" || true; }
-dump() { adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb exec-out cat /sdcard/ui.xml > "$OUT/ui.xml" 2>/dev/null; }
+# what is on screen, as the system describes it; an empty file means the system could not describe it this time
+dump() {
+  local i
+  for i in 1 2 3; do
+    adb shell rm -f /sdcard/ui.xml >/dev/null 2>&1
+    adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+    adb exec-out cat /sdcard/ui.xml > "$OUT/ui.xml" 2>/dev/null
+    grep -q "<node" "$OUT/ui.xml" 2>/dev/null && return 0
+    sleep 1
+  done
+  return 1
+}
 # centre of the first thing on screen whose text or description contains $1
 find_node() { python3 - "$1" "$OUT/ui.xml" <<'PY'
 import re, sys
@@ -26,7 +37,26 @@ for m in re.finditer(r'<node [^>]*>', xml):
 sys.exit(1)
 PY
 }
-tap_text() { dump; local p; if p=$(find_node "$1"); then adb shell input tap $p; say "tapped '$1' at $p"; return 0; fi; say "NOT FOUND on screen: '$1'"; return 1; }
+# the first few words readable on screen
+texts() { python3 - "$OUT/ui.xml" <<'PY'
+import re, sys
+try:
+    xml = open(sys.argv[1], encoding='utf-8', errors='ignore').read()
+except OSError:
+    xml = ''
+seen = []
+for m in re.finditer(r'<node [^>]*>', xml):
+    n = m.group(0)
+    t = re.search(r' text="([^"]*)"', n); d = re.search(r' content-desc="([^"]*)"', n)
+    label = (t.group(1) if t and t.group(1) else '') or (d.group(1) if d and d.group(1) else '')
+    if label and label not in seen:
+        seen.append(label)
+print(' | '.join(s[:36] for s in seen[:14]) or '(nothing readable)')
+PY
+}
+tap_text() { dump; local p; if p=$(find_node "$1"); then adb shell input tap $p; say "tapped '$1' at $p"; return 0; fi; say "NOT FOUND on screen: '$1'. On screen: $(texts)"; return 1; }
+# a slow emulator sometimes shows "... isn't responding": note which app it names, then choose Wait
+calm() { local p; if find_node "responding" >/dev/null; then say "system box: $(texts)"; if p=$(find_node "Wait"); then adb shell input tap $p; sleep 3; fi; return 0; fi; return 1; }
 front() { adb shell dumpsys activity activities | grep -E "ResumedActivity" | head -1 | tr -s ' ' | tr -d '\r'; }
 players() { adb shell dumpsys audio | grep -E "AudioPlaybackConfiguration" | grep -c "state:started"; }
 
@@ -34,6 +64,7 @@ say "== device"
 say "Android $(adb shell getprop ro.build.version.release | tr -d '\r') (API $(adb shell getprop ro.build.version.sdk | tr -d '\r')), $(adb shell wm size | tr -d '\r'), $(adb shell wm density | tr -d '\r')"
 say "apk: $(stat -c %s "$APK") bytes, sha256 $(sha256sum "$APK" | cut -c1-16)"
 say "web view: $(adb shell dumpsys webviewupdate | grep -E 'Current WebView package' | tr -s ' ' | tr -d '\r')"
+adb logcat -G 16M >/dev/null 2>&1
 say "== install"
 adb install -r "$APK" 2>&1 | tee -a "$OUT/result.txt"
 if ! adb shell pm list packages | grep -q "$PKG"; then
@@ -43,12 +74,21 @@ if ! adb shell pm list packages | grep -q "$PKG"; then
   exit 1
 fi
 say "RESULT: installed. $(adb shell dumpsys package $PKG | grep -E 'versionCode|versionName' | head -2 | tr -s ' ' | tr -d '\r' | tr '\n' ' ')"
+# let the freshly started system settle before the game opens
+sleep 8; for i in 1 2 3; do dump; calm || break; done
 adb logcat -c
 say "== start"
 adb shell am start -W -n "$PKG/.MainActivity" 2>&1 | grep -E "Status|TotalTime|Error" | tr -d '\r' | tee -a "$OUT/result.txt"
-for i in $(seq 1 40); do dump; if find_node "Tap to begin" >/dev/null; then break; fi; sleep 2; done
+t0=$(date +%s); found=no
+for i in $(seq 1 40); do
+  dump
+  if find_node "Tap to begin" >/dev/null; then found=yes; break; fi
+  calm
+  sleep 2
+done
 shot 01-title
-say "title screen found: $(find_node 'Tap to begin' >/dev/null && echo yes || echo no)"
+say "title screen found: $found, after $(( $(date +%s) - t0 )) s"
+[ "$found" = no ] && say "on screen instead: $(texts)"
 tap_text "Tap to begin"; sleep 4; shot 02-first-screen
 say "sound sources playing after the first touch: $(players)"
 for i in $(seq 1 12); do tap_text "Work the land" >/dev/null || break; sleep 0.3; done
@@ -71,7 +111,9 @@ shot 05c-menu-later
 adb shell input keyevent KEYCODE_BACK; sleep 2; shot 06-after-back
 dump; say "menu still open after Back: $(find_node 'Start over' >/dev/null && echo yes || echo no)"
 say "in front after Back: $(front)"
-sleep 3; say "sound sources playing in front: $(players)"
+# a second opening, to tell a slow first drawing from a slow sheet
+if tap_text "Menu" >/dev/null; then sleep 0.4; shot 05d-menu-again-early; sleep 1; shot 05e-menu-again-later; adb shell input keyevent KEYCODE_BACK; sleep 2; fi
+sleep 1; say "sound sources playing in front: $(players)"
 adb shell input keyevent KEYCODE_HOME; sleep 5
 say "sound sources playing after Home: $(players)"
 say "in front after Home: $(front)"
@@ -80,6 +122,6 @@ say "sound sources playing after coming back: $(players)"
 adb shell input keyevent KEYCODE_BACK; sleep 3
 say "in front after Back with nothing open: $(front)"
 adb logcat -d > "$OUT/logcat.txt"
-say "== page messages in the log"
-grep -E "Capacitor/Console|chromium.*(Uncaught|ERROR)|AndroidRuntime" "$OUT/logcat.txt" | head -30 | cut -c1-300 | tee -a "$OUT/result.txt"
+say "== trouble in the system log (apps not responding, crashes, page errors)"
+grep -E "ANR in |Reason: |FATAL EXCEPTION|AndroidRuntime: (Process|java\.|Caused by)|Force finishing activity|Process $PKG .*has died|Renderer process .*(crash|kill)|chromium.*Uncaught|Capacitor/Console.*[Ee]rror" "$OUT/logcat.txt" | head -24 | cut -c1-260 | tee -a "$OUT/result.txt"
 say "== done"

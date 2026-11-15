@@ -27,8 +27,17 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # The APK of the version in this commit, by its own address: "latest" can lag for a few seconds after a release.
       - name: Download the released APK
-        run: curl -fsSL -o long-ascent.apk "https://github.com/${{ github.repository }}/releases/latest/download/long-ascent.apk"
+        run: |
+          V=$(grep -oE 'var APP_VERSION=[0-9]+' index.html | grep -oE '[0-9]+$')
+          for i in $(seq 1 24); do
+            if curl -fsSL -o long-ascent.apk "https://github.com/${{ github.repository }}/releases/download/v$V/long-ascent.apk"; then
+              echo "Downloaded version $V"; exit 0
+            fi
+            echo "Version $V is not published yet, waiting"; sleep 15
+          done
+          echo "::error::No APK is published for version $V"; exit 1
 
       - name: Enable KVM
         run: |
@@ -52,7 +61,7 @@ jobs:
 
       # Small copies of the screenshots go into the log as text, so they can be read without downloading the artifact.
       - name: Print small copies of the screenshots
-        if: always() && matrix.api == 36
+        if: always()
         run: |
           python3 -m pip install --quiet pillow
           python3 - <<'PY'
@@ -63,8 +72,8 @@ jobs:
                   im = Image.open(f).convert('RGB')
               except Exception as e:
                   print('-----SKIP', f, e); continue
-              im = im.resize((360, round(im.height * 360 / im.width)))
-              buf = io.BytesIO(); im.save(buf, 'JPEG', quality=60)
+              im = im.resize((300, round(im.height * 300 / im.width)))
+              buf = io.BytesIO(); im.save(buf, 'JPEG', quality=55)
               print('-----IMG', f.split('/')[-1])
               print(base64.b64encode(buf.getvalue()).decode())
               print('-----END')
