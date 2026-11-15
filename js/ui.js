@@ -18,7 +18,7 @@
   let S = null, D = null, booted = false, bootSaved = 0;
   let view = { tab: 'realm', qty: 1, older: false, oldGround: false };
   let lineup = [], openLog = {}, live = [], sheetLive = [], lastSig = '', lastBadges = '', lastPips = '', lastEmblem = 0, launch = null, toastTimer = 0, saveTimer = 0, switched = true;
-  let histOpen = false, skipPop = 0, city = false, feedSig = '', drawQueued = false;
+  let sheetStep = false, cityStep = false, skipPop = 0, city = false, feedSig = '', drawQueued = false;
   const cloud = { ref: null, state: 'none', at: 0, dirty: false, busy: false, timer: 0 };
   const VERSION = +window.APP_VERSION || 0, NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
   const REPO = 'jpvanacor/long-ascent', APK_URL = 'https://github.com/' + REPO + '/releases/latest/download/long-ascent.apk';
@@ -144,25 +144,28 @@
   }
 
   /* ---------- sheets ---------- */
-  /* While a sheet or the city view is open there is one step in the browser history, so the phone's back button
-     closes what is on top instead of leaving the game. */
-  function arm() { if (!histOpen) { try { history.pushState({ layer: 1 }, ''); histOpen = true; } catch (e) { /* no history here */ } } }
-  function disarm() { if (histOpen) { histOpen = false; skipPop++; try { history.back(); } catch (e) { skipPop--; } } }
-  function layered() { return !$('modal').hidden || city; }
+  /* The city view and an open sheet are each one step in the browser history, so the phone's back button closes
+     what is on top instead of leaving the game. Each step is added while the player is touching the screen:
+     browsers skip steps a page adds on its own. The Android app does not rely on this; it asks goBack() below. */
+  function pushStep() { try { history.pushState({ layer: 1 }, ''); return true; } catch (e) { return false; } }
+  function dropStep() { skipPop++; try { history.back(); } catch (e) { skipPop--; } }
   function openSheet(build, silent) {
     const sh = $('sheet'); sh.textContent = ''; sheetLive = []; build(sh); $('modal').hidden = false; sh.scrollTop = 0; sheetLive.forEach(function (f) { f(); });
     if (!silent) Snd.play('open');
-    arm();
+    if (!sheetStep) sheetStep = pushStep();
   }
   function closeSheet(fromBack) {
     $('modal').hidden = true; $('sheet').textContent = ''; sheetLive = [];
-    if (fromBack !== true && !city) disarm();
+    if (sheetStep) { sheetStep = false; if (fromBack !== true) dropStep(); }
   }
   function onPop() {
-    if (skipPop > 0) { skipPop--; if (layered()) arm(); return; }      // our own step back; whatever opened in the meantime needs its own step
-    histOpen = false;                                                   // the back button used the step up
+    if (skipPop > 0) { skipPop--; return; }                             // our own step back
     if (!$('modal').hidden) closeSheet(true); else if (city) closeCity(true);
-    if (layered()) arm();
+  }
+  function goBack() {                        // what Back means in the game: close what is on top; false when nothing is open
+    if (!$('modal').hidden) { closeSheet(); return true; }
+    if (city) { closeCity(); return true; }
+    return false;
   }
   function inSheet(build) { const keep = live; live = sheetLive; try { return build(); } finally { live = keep; } }   // a card whose numbers follow the sheet, not the panel
   function goTab(tab) { if (!$('modal').hidden) closeSheet(); if (city) closeCity(); go(tab); }
@@ -300,7 +303,7 @@
     if (city || launch) return;
     city = true; document.documentElement.classList.add('city'); $('cityui').hidden = false;
     Scene.city(true, parseFloat(getComputedStyle($('tabs')).paddingBottom) || 0);
-    arm(); Snd.play('open'); feedSig = ''; drawFeed(); redraw();
+    cityStep = pushStep(); Snd.play('open'); feedSig = ''; drawFeed(); redraw();
     if (!S.seen.city) {                      // said once: how to move about
       S.seen.city = 1;
       const h = el('div', null, 'Drag to look around. Pinch or double tap to come closer. Tap a building to act.'); h.id = 'cityhint'; $('cityui').appendChild(h);
@@ -309,8 +312,9 @@
   }
   function closeCity(fromBack) {
     if (!city) return;
+    if (!$('modal').hidden) closeSheet();    // a card over the city goes first: its step lies on top of the city's
     city = false; document.documentElement.classList.remove('city'); $('cityui').hidden = true; Scene.city(false);
-    if (fromBack !== true && $('modal').hidden) disarm();
+    if (cityStep) { cityStep = false; if (fromBack !== true) dropStep(); }
     redraw();
   }
   function feedLines() {                     // what is going on, in a few words: icon, text, the place it belongs to, whether it calls for action
@@ -366,7 +370,7 @@
     let total = 0; for (const k in S.b) total += S.b[k];
     const houses = Math.min(47, 3 + Math.floor(1.7 * Math.sqrt(total)));
     info('The town', 'ui.village', 'civ', ['The street fills as the realm builds: every farm, yard and hall brings people to live here.',
-      add(el('div', 'stats'), stat('ui.village', houses + ' houses'), stat('ui.store', total + ' buildings in all')),
+      add(el('div', 'stats'), stat('ui.village', houses + ' houses'), stat('ui.store', total + (total === 1 ? ' building' : ' buildings') + ' in all')),
       'It is busiest by day. After dark the lamps are lit and most are indoors.']);
   }
   function citySite(id) {                    // something in the picture was touched
@@ -1086,6 +1090,7 @@
     }
     checkUpdate();
     window.__la = { get state() { return S; }, set: function (st) { adopt(st); }, scene: Scene, go: go, city: openCity, leave: closeCity, touch: citySite };
+    window.__back = goBack;                  // the Android app calls this when Back is pressed
   }
   const hot = window.claude && window.claude.hot;
   if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});

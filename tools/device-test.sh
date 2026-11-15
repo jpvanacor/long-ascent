@@ -134,7 +134,8 @@ if tap_text "Your settlement"; then
   adb shell input keyevent KEYCODE_BACK; sleep 2
   dump; say "after Back: card $(find_node 'houses' >/dev/null && echo 'still open' || echo closed), city $(find_node 'Close the city' >/dev/null && echo 'still open' || echo closed)"
   adb shell input keyevent KEYCODE_BACK; sleep 2
-  dump; say "after Back again: city $(find_node 'Close the city' >/dev/null && echo 'still open' || echo closed), in front: $(front)"
+  if front | grep -q "$PKG"; then dump; say "after Back again: city $(find_node 'Close the city' >/dev/null && echo 'still open' || echo closed), the game is still in front"
+  else say "after Back again: THE GAME LEFT THE SCREEN instead of closing the city ($(front))"; adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1; sleep 4; fi
 fi
 sleep 1; say "sound sources playing in front: $(players)"
 adb shell input keyevent KEYCODE_HOME; sleep 5

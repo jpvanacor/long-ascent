@@ -93,6 +93,26 @@ const PORT = 8139, wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await p.locator('#sheet .btn.big').first().tap(); await tick();
   ok('"To the heroes" leaves the city for that tab', !(await cityOn()) && !(await sheetOn()) && await p.evaluate(() => document.querySelector('#tabs button.on').dataset.tab) === 'heroes');
 
+  // a card over the city: Back twice closes the card, then the city; the Android app asks the same of goBack
+  await p.evaluate(() => window.__la.go('realm')); await tick();
+  await p.locator('#expand').tap(); await tick();
+  await p.locator('#feed .tag[data-feed="work:1"]').tap(); await tick();
+  ok('a card opens over the city again', await sheetOn() && await cityOn());
+  await back();
+  const mid = [await sheetOn(), await cityOn()];
+  await back();
+  ok('Back, Back: first the card, then the city', !mid[0] && mid[1] && !(await sheetOn()) && !(await cityOn()));
+  await p.locator('#expand').tap(); await tick();
+  await p.locator('#feed .tag[data-feed="work:1"]').tap(); await tick();
+  const b1 = await p.evaluate(() => window.__back()), s1 = [await sheetOn(), await cityOn()];
+  await wait(200); await tick();
+  const b2 = await p.evaluate(() => window.__back()), s2 = [await sheetOn(), await cityOn()];
+  await wait(200); await tick();
+  const b3 = await p.evaluate(() => window.__back());
+  ok('the Android Back hook closes the card, then the city, then reports nothing left', b1 === true && !s1[0] && s1[1] && b2 === true && !s2[1] && b3 === false);
+  await p.locator('#menu').tap(); await tick(); await back();
+  ok('the history steps are still in order afterwards', !(await sheetOn()) && await p.evaluate(() => document.location.pathname.endsWith('index.html')));
+
   // Back closes the city; the close button too
   await p.evaluate(() => window.__la.go('realm')); await tick();
   await p.locator('#expand').tap(); await tick();
